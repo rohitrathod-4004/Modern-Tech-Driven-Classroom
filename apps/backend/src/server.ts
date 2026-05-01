@@ -1,7 +1,9 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { connectDB } from "./db/connection";
 import uploadRouter from "./routes/upload";
+import transcriptRouter from "./routes/transcript";
 
 dotenv.config();
 
@@ -19,10 +21,13 @@ app.get("/health", (_req, res) => {
 
 // Routes
 app.use("/", uploadRouter);
+app.use("/", transcriptRouter);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`[server] Backend running at http://localhost:${PORT}`);
+// Connect to MongoDB, then start server
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`[server] Backend running at http://localhost:${PORT}`);
+  });
 });
 
 export default app;
