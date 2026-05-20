@@ -1,6 +1,10 @@
 import ffmpeg from "fluent-ffmpeg";
+import ffmpegStatic from "ffmpeg-static";
 import path from "path";
 
+if (ffmpegStatic) {
+  ffmpeg.setFfmpegPath(ffmpegStatic);
+}
 /**
  * Converts any audio file to WAV format (mono, 16kHz) using ffmpeg.
  * Returns the path to the converted WAV file.
