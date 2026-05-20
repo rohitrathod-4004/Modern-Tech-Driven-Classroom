@@ -85,7 +85,7 @@ router.post("/upload-chunk", upload.single("file"), async (req: Request, res: Re
     await Session.findOneAndUpdate(
       { session_id },
       { session_id },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     const firstSeg = result.segments && result.segments.length > 0 ? result.segments[0] : null;

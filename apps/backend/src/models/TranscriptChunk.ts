@@ -12,7 +12,7 @@ export interface ITranscriptChunk extends Document {
 const TranscriptChunkSchema = new Schema<ITranscriptChunk>({
   session_id:  { type: String,  required: true, index: true },
   chunk_index: { type: Number,  required: true },
-  text:        { type: String,  required: true },
+  text:        { type: String,  default: "" },
   start_time:  { type: Number,  required: true },
   end_time:    { type: Number,  required: true },
   created_at:  { type: Date,    default: Date.now },

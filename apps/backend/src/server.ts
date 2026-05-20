@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import { connectDB } from "./db/connection";
 import uploadRouter from "./routes/upload";
 import transcriptRouter from "./routes/transcript";
+import summaryRouter from "./routes/summary";
 
 dotenv.config();
 
@@ -22,6 +23,8 @@ app.get("/health", (_req, res) => {
 // Routes
 app.use("/", uploadRouter);
 app.use("/", transcriptRouter);
+app.use("/", summaryRouter);
+
 
 // Connect to MongoDB, then start server
 connectDB().then(() => {
