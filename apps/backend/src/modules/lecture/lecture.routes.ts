@@ -9,7 +9,7 @@ import { z } from 'zod';
 const objectIdSchemaLocal = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid MongoDB ObjectId');
 import { getLectureSummary, getLectureTopics, askLectureAI } from './lecture.ai.controller';
 import { getNotes, createNote, deleteNote, getBookmarks, createBookmark, deleteBookmark } from './lecture.collaboration.controller';
-import { exportLectureData } from './lecture.export.controller';
+import { exportLectureData, exportStudyPackPdf } from './lecture.export.controller';
 import { getLectureQuiz, getLectureFlashcards } from './lecture.study.controller';
 import { LectureLibraryController } from './lecture.library.controller';
 
@@ -203,6 +203,15 @@ router.get(
     query: z.object({ format: z.string().optional() })
   }),
   exportLectureData
+);
+
+router.get(
+  "/lectures/:lectureId/export-study-pack",
+  authenticate,
+  validate({ 
+    params: z.object({ lectureId: objectIdSchemaLocal })
+  }),
+  exportStudyPackPdf
 );
 
 // --- Phase 4B: Study Material Routes ---

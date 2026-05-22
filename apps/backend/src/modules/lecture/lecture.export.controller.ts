@@ -3,6 +3,11 @@ import { Lecture } from '../../models/Lecture';
 import { TranscriptChunk } from '../../models/TranscriptChunk';
 import { LectureNote } from '../../models/LectureNote';
 import { LectureBookmark } from '../../models/LectureBookmark';
+import { Course } from '../../models/Course';
+import { User } from '../../models/User';
+import { LectureQuiz } from '../../models/LectureQuiz';
+import { LectureFlashcard } from '../../models/LectureFlashcard';
+import { PdfService } from '../../services/pdf/pdf.service';
 
 export const exportLectureData = async (req: Request, res: Response) => {
   const { lectureId } = req.params;
@@ -61,5 +66,46 @@ export const exportLectureData = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Export error:', error);
     res.status(500).json({ success: false, error: 'Failed to export lecture' });
+  }
+};
+
+export const exportStudyPackPdf = async (req: Request, res: Response) => {
+  const { lectureId } = req.params;
+
+  try {
+    // Parallel fetching for performance
+    const [lecture, chunks, quiz, flashcards] = await Promise.all([
+      Lecture.findById(lectureId).lean(),
+      TranscriptChunk.find({ lectureId }).sort({ chunk_index: 1 }).lean(),
+      LectureQuiz.findOne({ lectureId }).lean(),
+      LectureFlashcard.findOne({ lectureId }).lean()
+    ]);
+
+    if (!lecture) {
+      return res.status(404).json({ success: false, error: 'Lecture not found' });
+    }
+
+    const course = await Course.findById(lecture.courseId).lean();
+    const teacher = await User.findById(lecture.teacherId).lean();
+
+    const pdfBuffer = await PdfService.generateStudyPackPdf({
+      lecture: lecture as any,
+      courseTitle: course?.title || 'Unknown Course',
+      teacherName: teacher?.name || 'Unknown Instructor',
+      chunks: chunks as any,
+      quiz: quiz as any,
+      flashcards: flashcards as any
+    });
+
+    const filename = `${lecture.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_study_pack.pdf`;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+    
+  } catch (error) {
+    console.error('PDF Export error:', error);
+    res.status(500).json({ success: false, error: 'Failed to generate Study Pack PDF' });
   }
 };
