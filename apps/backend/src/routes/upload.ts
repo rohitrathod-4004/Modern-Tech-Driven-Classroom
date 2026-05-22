@@ -92,7 +92,8 @@ router.post("/upload-chunk", authenticate, upload.single("file"), async (req: Re
     console.log(`[upload] [${requestId}] Processing audio payload...`);
     
     // Quick guard for trivially empty files to prevent ffmpeg/python crashes
-    if (req.file.size < 500) {
+    // Using 100 bytes (not 500) — WebM headers are small, we don't want to drop real audio
+    if (req.file.size < 100) {
       console.log(`[upload] [${requestId}] File size too small (${req.file.size} bytes), skipping processing.`);
       res.json({ text: "", segments: [], latency_ms: 0, status: "skipped" });
       return;

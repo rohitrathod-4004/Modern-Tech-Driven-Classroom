@@ -60,11 +60,21 @@ export class LectureController {
       }
     }
 
-    const data = await LectureService.listLectures(courseId, userId, limit);
+    const data = await LectureService.listLectures(courseId, userId, req.user!.role, limit);
 
     res.status(200).json({
       data
     });
+  }
+
+  static async getLiveStatus(req: Request, res: Response) {
+    const { courseId } = req.params;
+    const userId = req.user!.id;
+    const role = req.user!.role;
+    
+    const data = await LectureService.getLiveStatus(courseId, userId, role);
+    
+    res.status(200).json({ data });
   }
 
   static async getTimeline(req: Request, res: Response) {
@@ -79,5 +89,16 @@ export class LectureController {
     res.status(200).json({
       data
     });
+  }
+
+  static async getLiveChunks(req: Request, res: Response) {
+    const { courseId, lectureId } = req.params;
+    const userId = req.user!.id;
+    const role = req.user!.role;
+    const afterSequence = req.query.afterSequence ? parseInt(req.query.afterSequence as string, 10) : -1;
+
+    const data = await LectureService.getLiveChunks(courseId, lectureId, userId, role, afterSequence);
+
+    res.status(200).json({ data });
   }
 }

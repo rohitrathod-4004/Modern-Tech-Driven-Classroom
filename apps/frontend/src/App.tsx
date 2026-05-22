@@ -6,6 +6,7 @@ import { Register } from "./features/auth/Register";
 import { Dashboard } from "./features/dashboard/Dashboard";
 import { LectureTranscriber } from "./features/recording/LectureTranscriber";
 import { LectureViewer } from "./features/lecture/LectureViewer";
+import { LiveLectureViewer } from "./features/lecture/LiveLectureViewer";
 import { LectureLibrary } from "./features/lecture/LectureLibrary";
 import { AppShell } from "./components/layout/AppShell";
 import { CourseList } from "./features/courses/CourseList";
@@ -57,6 +58,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/courses" element={<CourseList />} />
             <Route path="/courses/:courseId" element={<CourseDetails />} />
+            <Route path="/courses/:courseId/live" element={<LiveLectureViewer />} />
             <Route path="/lectures" element={<LectureLibrary />} />
             <Route path="/record" element={<LectureTranscriber />} />
             <Route path="/courses/:courseId/lectures/:lectureId" element={<LectureViewer />} />

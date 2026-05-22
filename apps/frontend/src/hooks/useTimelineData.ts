@@ -8,12 +8,21 @@ interface UseTimelineDataReturn {
   error: string | null;
 }
 
-export const useTimelineData = (courseId: string, lectureId: string): UseTimelineDataReturn => {
+interface UseTimelineDataOptions {
+  skip?: boolean;
+}
+
+export const useTimelineData = (courseId: string, lectureId: string, options?: UseTimelineDataOptions): UseTimelineDataReturn => {
   const [data, setData] = useState<TimelineNode[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!options?.skip);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (options?.skip) {
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
 
     const fetchTimeline = async () => {
@@ -50,7 +59,7 @@ export const useTimelineData = (courseId: string, lectureId: string): UseTimelin
     return () => {
       isMounted = false;
     };
-  }, [courseId, lectureId]);
+  }, [courseId, lectureId, options?.skip]);
 
   return { data, loading, error };
 };

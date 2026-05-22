@@ -25,7 +25,9 @@ export class LectureService {
       title,
       status: 'recording',
       startedAt: new Date(),
-      chunkCount: 0
+      chunkCount: 0,
+      isLive: true,
+      liveStartedAt: new Date()
     });
 
     return lecture;
@@ -92,6 +94,8 @@ export class LectureService {
     lecture.endedAt = now;
     lecture.processingStartedAt = now;
     lecture.durationSeconds = durationSeconds;
+    lecture.isLive = false;
+    lecture.liveEndedAt = now;
     await lecture.save();
     
     // Concatenate saved audio chunks into a single lecture audio file (non-blocking)
@@ -163,14 +167,53 @@ export class LectureService {
   }
 
   /**
-   * Fetches recent lectures for a course
+   * Fetches recent lectures for a course, validating course enrollment.
    */
-  static async listLectures(courseId: string, userId: string, limit: number) {
+  static async listLectures(courseId: string, userId: string, role: string, limit: number) {
+    const course = await Course.findOne({ _id: courseId, deletedAt: null }).lean();
+    if (!course) throw new AppError('Course not found', 404, ErrorCodes.NOT_FOUND);
+
+    if (role === 'teacher') {
+      if (course.teacherId.toString() !== userId) {
+        throw new AppError('Unauthorized: Not the course teacher', 403, ErrorCodes.FORBIDDEN);
+      }
+    } else if (role === 'student') {
+      const isEnrolled = course.students.some(id => id.toString() === userId);
+      if (!isEnrolled) {
+        throw new AppError('Unauthorized: Not enrolled in this course', 403, ErrorCodes.FORBIDDEN);
+      }
+    }
+
     const lectures = await Lecture.find({ courseId, deletedAt: null })
       .sort({ startedAt: -1 })
       .limit(limit)
       .lean();
     return lectures;
+  }
+
+  /**
+   * Fetches the active live lecture for a course, if any.
+   */
+  static async getLiveStatus(courseId: string, userId: string, role: string) {
+    const course = await Course.findOne({ _id: courseId, deletedAt: null }).lean();
+    if (!course) throw new AppError('Course not found', 404, ErrorCodes.NOT_FOUND);
+
+    if (role === 'teacher') {
+      if (course.teacherId.toString() !== userId) {
+        throw new AppError('Unauthorized: Not the course teacher', 403, ErrorCodes.FORBIDDEN);
+      }
+    } else if (role === 'student') {
+      const isEnrolled = course.students.some(id => id.toString() === userId);
+      if (!isEnrolled) {
+        throw new AppError('Unauthorized: Not enrolled in this course', 403, ErrorCodes.FORBIDDEN);
+      }
+    }
+
+    const liveLecture = await Lecture.findOne({ courseId, isLive: true, deletedAt: null })
+      .select('_id title startedAt liveStartedAt teacherId status')
+      .lean();
+
+    return liveLecture || null;
   }
 
   /**
@@ -223,5 +266,39 @@ export class LectureService {
       hasMore,
       totalChunks: lecture.chunkCount
     };
+  }
+
+  /**
+   * Fetches only the latest transcript chunks for a live lecture.
+   * Ensures high performance using .lean() and respects course authorization.
+   */
+  static async getLiveChunks(courseId: string, lectureId: string, userId: string, role: string, afterSequence: number) {
+    await this.validateLectureAccess(courseId, lectureId, userId, role);
+
+    const chunks = await TranscriptChunk.find({
+      lectureId,
+      chunk_index: { $gt: afterSequence }
+    })
+      .sort({ chunk_index: 1 })
+      .limit(50) // Safe batch size
+      .lean();
+
+    const nodes: TranscriptTimelineNode[] = chunks.map(chunk => {
+      const chunkOffset = chunk.chunk_index * 3;
+      const absoluteStartTime = chunkOffset + (chunk.start_time || 0);
+      const absoluteEndTime = chunkOffset + (chunk.end_time || 0);
+
+      return {
+        id: chunk._id.toString(),
+        type: 'transcript',
+        text: chunk.text,
+        chunkIndex: chunk.chunk_index,
+        absoluteStartTime,
+        absoluteEndTime,
+        confidenceScore: chunk.confidenceScore
+      };
+    });
+
+    return nodes;
   }
 }

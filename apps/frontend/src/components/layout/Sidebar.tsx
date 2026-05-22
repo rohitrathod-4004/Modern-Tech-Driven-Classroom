@@ -9,7 +9,6 @@ export function Sidebar() {
   const navigation = [
     { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
     { name: 'Courses', to: '/courses', icon: BookOpen },
-    { name: 'Lectures', to: '/lectures', icon: Video },
     { name: 'AI Workspace', to: '/workspace', icon: BrainCircuit },
   ];
 

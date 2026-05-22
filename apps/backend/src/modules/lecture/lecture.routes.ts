@@ -65,6 +65,16 @@ router.get(
   asyncHandler(LectureLibraryController.getAllLectures)
 );
 
+// GET /api/courses/:courseId/live-status
+router.get(
+  '/courses/:courseId/live-status',
+  authenticate,
+  validate({
+    params: z.object({ courseId: objectIdSchemaLocal })
+  }),
+  asyncHandler(LectureController.getLiveStatus)
+);
+
 // GET /api/courses/:courseId/lectures/:lectureId
 router.get(
   '/courses/:courseId/lectures/:lectureId',
@@ -93,6 +103,22 @@ router.get(
     })
   }),
   asyncHandler(LectureController.getTimeline)
+);
+
+// GET /api/courses/:courseId/lectures/:lectureId/live-chunks
+router.get(
+  '/courses/:courseId/lectures/:lectureId/live-chunks',
+  authenticate,
+  validate({
+    params: z.object({
+      courseId: objectIdSchemaLocal,
+      lectureId: objectIdSchemaLocal
+    }),
+    query: z.object({
+      afterSequence: z.string().optional()
+    })
+  }),
+  asyncHandler(LectureController.getLiveChunks)
 );
 
 // Phase 3A AI endpoints

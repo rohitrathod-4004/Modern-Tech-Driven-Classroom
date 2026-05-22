@@ -19,6 +19,7 @@ interface TimelineState {
   isSearching: boolean;
 
   setNodes: (nodes: TimelineNode[]) => void;
+  appendNodes: (nodes: TimelineNode[]) => void;
   setActiveNode: (id: string | null, index: number) => void;
   setPlaybackTime: (time: number) => void;
   seekTo: (time: number) => void;
@@ -54,6 +55,11 @@ export const useTimelineStore = create<TimelineState>((set) => ({
   isSearching: false,
 
   setNodes: (nodes) => set({ nodes }),
+  appendNodes: (newNodes) => set((state) => {
+    // Only append if there are actually new nodes
+    if (newNodes.length === 0) return state;
+    return { nodes: [...state.nodes, ...newNodes] };
+  }),
   setActiveNode: (id, index) => set((state) => {
     // Only update if changed to avoid unnecessary Zustand subscribers triggering
     if (state.activeNodeId !== id) {

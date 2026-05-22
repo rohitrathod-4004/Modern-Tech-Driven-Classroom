@@ -97,7 +97,7 @@ export const Recorder: React.FC<RecorderProps> = ({
 
     try {
       while (true) {
-        if (!activeLectureIdRef.current || activeLectureIdRef.current !== lectureId) break;
+        if (!activeLectureIdRef.current) break;
 
         const pendingItems = queueRef.current
           .filter((item) => item.status !== "done")

@@ -8,6 +8,9 @@ export interface ILectureDocument extends Document {
   status: LectureStatus;
   startedAt: Date;
   endedAt?: Date;
+  isLive?: boolean;
+  liveStartedAt?: Date;
+  liveEndedAt?: Date;
   durationSeconds?: number;
   chunkCount: number;
   transcriptionLanguage?: string;
@@ -65,6 +68,9 @@ const LectureSchema = new Schema<ILectureDocument>({
   status: { type: String, enum: ['recording', 'transcribing', 'ai_processing', 'ready', 'failed'], default: 'recording' },
   startedAt: { type: Date, default: Date.now },
   endedAt: { type: Date },
+  isLive: { type: Boolean, default: false },
+  liveStartedAt: { type: Date },
+  liveEndedAt: { type: Date },
   durationSeconds: { type: Number },
   chunkCount: { type: Number, default: 0 },
   transcriptionLanguage: { type: String },
