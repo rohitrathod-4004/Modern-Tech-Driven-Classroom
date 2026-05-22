@@ -1,0 +1,16 @@
+{
+  "name": "ai-classroom-platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently -c \"cyan,magenta\" \"npm run dev -w frontend\" \"npm run dev -w backend\"",
+    "seed": "npm run seed -w backend",
+    "seed:reset": "npm run seed:reset -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

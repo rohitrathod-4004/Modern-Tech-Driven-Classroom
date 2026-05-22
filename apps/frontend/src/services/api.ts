@@ -1,6 +1,7 @@
-import axios from "axios";
+import { api } from "../infrastructure/api";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// API_URL fallback not needed since infrastructure/api.ts is pre-configured
+
 
 export interface TranscriptionResponse {
   text: string;
@@ -14,20 +15,23 @@ export interface TranscriptionResponse {
 
 export async function uploadChunk(
   file: Blob,
-  session_id: string,
+  lectureId: string,
+  courseId: string,
   chunk_index: number,
   language: string
 ): Promise<TranscriptionResponse> {
   const formData = new FormData();
   formData.append("file", file, `chunk_${chunk_index}.webm`);
-  formData.append("session_id", session_id);
+  formData.append("lectureId", lectureId);
+  formData.append("courseId", courseId);
+  formData.append("session_id", lectureId); // Legacy compatibility fallback
   formData.append("chunk_index", chunk_index.toString());
   formData.append("language", language);
 
-  console.log(`[api] Sending chunk ${chunk_index} for session ${session_id}`);
+  console.log(`[api] Sending chunk ${chunk_index} for lecture ${lectureId}`);
 
-  const response = await axios.post<TranscriptionResponse>(
-    `${API_URL}/upload-chunk`,
+  const response = await api.post<TranscriptionResponse>(
+    `/upload-chunk`,
     formData,
     {
       headers: {

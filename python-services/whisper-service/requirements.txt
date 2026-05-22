@@ -1,7 +1,7 @@
 fastapi==0.110.0
 uvicorn==0.27.1
-av==12.1.0
-faster-whisper==1.0.3
+av==14.0.0
+faster-whisper>=1.1.0
 python-multipart==0.0.9
 python-dotenv==1.0.1
 # Explicitly adding missing sub-dependencies

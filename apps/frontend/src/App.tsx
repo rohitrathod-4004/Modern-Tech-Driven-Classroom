@@ -1,57 +1,75 @@
-import { useState, useRef } from "react";
-import { Recorder } from "./components/Recorder";
-import { Transcript } from "./components/Transcript";
-import type { TranscriptChunk } from "./components/Transcript";
+import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { Login } from "./features/auth/Login";
+import { Register } from "./features/auth/Register";
+import { Dashboard } from "./features/dashboard/Dashboard";
+import { LectureTranscriber } from "./features/recording/LectureTranscriber";
+import { LectureViewer } from "./features/lecture/LectureViewer";
+import { LectureLibrary } from "./features/lecture/LectureLibrary";
+import { AppShell } from "./components/layout/AppShell";
+import { CourseList } from "./features/courses/CourseList";
+import { CourseDetails } from "./features/courses/CourseDetails";
+import { HealthBadge } from "./components/HealthBadge";
+import { useAuthStore } from "./infrastructure/stores/authStore";
+import { api } from "./infrastructure/api";
+import { SettingsPage } from "./features/settings/SettingsPage";
+import { AIWorkspace } from "./features/workspace/AIWorkspace";
 
 function App() {
-  const [sessionId, setSessionId] = useState<string>(`session-${Date.now()}`);
-  const [chunks, setChunks] = useState<TranscriptChunk[]>([]);
-  const processedIndicesRef = useRef<Set<number>>(new Set());
+  const [isInitializing, setIsInitializing] = useState(true);
+  const setAuth = useAuthStore(state => state.setAuth);
+  const logout = useAuthStore(state => state.logout);
 
-  const handleNewChunk = (
-    chunk_index: number, 
-    text: string, 
-    status: "live" | "offline" | "synced"
-  ) => {
-    setChunks((prev) => {
-      // Check if the chunk already exists
-      const existingIndex = prev.findIndex((c) => c.chunk_index === chunk_index);
-      
-      if (existingIndex !== -1) {
-        // Update status/text if moving from offline to synced
-        const updated = [...prev];
-        updated[existingIndex] = { chunk_index, text, status };
-        return updated.sort((a, b) => a.chunk_index - b.chunk_index);
-      }
+  useEffect(() => {
+    // Attempt to silently refresh token on initial load if we have an HttpOnly cookie
+    api.post('/api/auth/refresh')
+      .then(res => {
+        const accessToken = res.data.data.accessToken;
+        // Now fetch user details
+        return api.get('/api/auth/me', {
+          headers: { Authorization: `Bearer ${accessToken}` }
+        }).then(userRes => {
+          setAuth(userRes.data.data.user, accessToken);
+        });
+      })
+      .catch(() => {
+        logout();
+      })
+      .finally(() => {
+        setIsInitializing(false);
+      });
+  }, [setAuth, logout]);
 
-      // Add new
-      const updated = [...prev, { chunk_index, text, status }];
-      return updated.sort((a, b) => a.chunk_index - b.chunk_index);
-    });
-  };
-
-  const handleResetSession = () => {
-    setSessionId(`session-${Date.now()}`);
-    setChunks([]);
-    processedIndicesRef.current.clear();
-  };
+  if (isInitializing) {
+    return <div>Loading session...</div>;
+  }
 
   return (
-    <div className="app-container">
-      <header className="app-header">
-        <h1>Lecture Transcriber</h1>
-        <p>Offline-first, hardware accelerated, resilient microprocessing.</p>
-      </header>
-      
-      <Recorder 
-        sessionId={sessionId} 
-        chunksProcessed={chunks.length}
-        onNewChunk={handleNewChunk} 
-        onResetSession={handleResetSession} 
-      />
-      
-      <Transcript chunks={chunks} />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route element={<AppShell />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/courses" element={<CourseList />} />
+            <Route path="/courses/:courseId" element={<CourseDetails />} />
+            <Route path="/lectures" element={<LectureLibrary />} />
+            <Route path="/record" element={<LectureTranscriber />} />
+            <Route path="/courses/:courseId/lectures/:lectureId" element={<LectureViewer />} />
+            <Route path="/workspace" element={<AIWorkspace />} />
+            <Route path="/settings" element={<SettingsPage />} />
+          </Route>
+        </Route>
+        
+        {/* Redirect unknown routes */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+      <HealthBadge />
+    </BrowserRouter>
   );
 }
 
