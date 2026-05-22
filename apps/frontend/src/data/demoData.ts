@@ -8,7 +8,7 @@ export const DEMO_CHUNKS = [
 ];
 
 export const DEMO_SUMMARY = {
-  summary: "This lecture introduces the foundational concepts of artificial intelligence, focusing heavily on how modern neural networks learn. The core mechanism discussed is backpropagation, which leverages calculus to adjust network weights and minimize errors during training.",
+  summary: "This lecture introduces the foundational concepts of artificial intelligence (AI), focusing heavily on how modern neural networks learn. The core mechanism discussed is backpropagation, which leverages calculus to adjust network weights and minimize errors during training.",
   topics: [
     "Artificial Intelligence",
     "Neural Networks",
