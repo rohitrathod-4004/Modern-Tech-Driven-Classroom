@@ -5,6 +5,13 @@ import { connectDB } from "./db/connection";
 import uploadRouter from "./routes/upload";
 import transcriptRouter from "./routes/transcript";
 import summaryRouter from "./routes/summary";
+import authRouter from "./routes/authRoutes";
+import classroomRouter from "./routes/classroomRoutes";
+import lectureRouter from "./routes/lectureRoutes";
+import searchRouter from "./routes/searchRoutes";
+import bookmarkRouter from "./routes/bookmarkRoutes";
+import revisionRouter from "./routes/revisionRoutes";
+import analyticsRouter from "./routes/analyticsRoutes";
 
 dotenv.config();
 
@@ -21,9 +28,17 @@ app.get("/health", (_req, res) => {
 });
 
 // Routes
+app.use("/api/auth", authRouter);
+app.use("/api/classrooms", classroomRouter);
+app.use("/api/lectures", lectureRouter);
+app.use("/api/revision", revisionRouter);
+app.use("/api/analytics", analyticsRouter);
+app.use("/", searchRouter);
+app.use("/", bookmarkRouter);
 app.use("/", uploadRouter);
 app.use("/", transcriptRouter);
 app.use("/", summaryRouter);
+
 
 
 // Connect to MongoDB, then start server
@@ -34,3 +49,4 @@ connectDB().then(() => {
 });
 
 export default app;
+

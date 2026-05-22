@@ -8,15 +8,19 @@ export interface PersistentChunk {
 
 const DB_NAME = "transcriber-db";
 const STORE_NAME = "chunks";
+const BOOKMARKS_STORE = "bookmarks";
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, 2);
+    const request = indexedDB.open(DB_NAME, 3);
     
     request.onupgradeneeded = () => {
       const db = request.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains(BOOKMARKS_STORE)) {
+        db.createObjectStore(BOOKMARKS_STORE, { keyPath: "_id" });
       }
     };
     
@@ -24,6 +28,7 @@ function openDB(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error);
   });
 }
+
 
 export async function saveChunkOffline(chunk: PersistentChunk): Promise<void> {
   const db = await openDB();
@@ -68,3 +73,37 @@ export async function removeChunkOffline(id: string): Promise<void> {
     request.onerror = () => reject(request.error);
   });
 }
+
+export async function saveBookmarkOffline(bookmark: any): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BOOKMARKS_STORE, "readwrite");
+    const store = tx.objectStore(BOOKMARKS_STORE);
+    const request = store.put(bookmark);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function loadAllOfflineBookmarks(): Promise<any[]> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BOOKMARKS_STORE, "readonly");
+    const store = tx.objectStore(BOOKMARKS_STORE);
+    const request = store.getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function removeBookmarkOffline(id: string): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(BOOKMARKS_STORE, "readwrite");
+    const store = tx.objectStore(BOOKMARKS_STORE);
+    const request = store.delete(id);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+

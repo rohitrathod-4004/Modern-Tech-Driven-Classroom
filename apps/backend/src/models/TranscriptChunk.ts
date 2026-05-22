@@ -20,8 +20,10 @@ const TranscriptChunkSchema = new Schema<ITranscriptChunk>({
 
 // Compound unique index: fast lookups, ordering, and idempotency enforcement
 TranscriptChunkSchema.index({ session_id: 1, chunk_index: 1 }, { unique: true });
+TranscriptChunkSchema.index({ text: "text" });
 
 export const TranscriptChunk = mongoose.model<ITranscriptChunk>(
   "TranscriptChunk",
   TranscriptChunkSchema
 );
+

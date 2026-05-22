@@ -1,10 +1,10 @@
 export const DEMO_CHUNKS = [
-  { chunk_index: 0, text: "Welcome to today's lecture on artificial intelligence. ", status: "synced" as const },
-  { chunk_index: 1, text: "We will be discussing how modern neural networks are trained using backpropagation. ", status: "synced" as const },
-  { chunk_index: 2, text: "It is important to understand that backpropagation uses the chain rule of calculus ", status: "synced" as const },
-  { chunk_index: 3, text: "to compute gradients of the loss function with respect to the weights. ", status: "synced" as const },
-  { chunk_index: 4, text: "This allows the optimizer, like Adam or SGD, to minimize the loss. ", status: "synced" as const },
-  { chunk_index: 5, text: "Please review chapter 4 before our next class, and make sure your environment is setup.", status: "synced" as const }
+  { chunk_index: 0, text: "Welcome to today's lecture on artificial intelligence. ", status: "synced" as const, start_time: 0, end_time: 30 },
+  { chunk_index: 1, text: "We will be discussing how modern neural networks are trained using backpropagation. ", status: "synced" as const, start_time: 30, end_time: 60 },
+  { chunk_index: 2, text: "It is important to understand that backpropagation uses the chain rule of calculus ", status: "synced" as const, start_time: 60, end_time: 90 },
+  { chunk_index: 3, text: "to compute gradients of the loss function with respect to the weights. ", status: "synced" as const, start_time: 90, end_time: 120 },
+  { chunk_index: 4, text: "This allows the optimizer, like Adam or SGD, to minimize the loss. ", status: "synced" as const, start_time: 120, end_time: 150 },
+  { chunk_index: 5, text: "Please review chapter 4 before our next class, and make sure your environment is setup.", status: "synced" as const, start_time: 150, end_time: 180 }
 ];
 
 export const DEMO_SUMMARY = {

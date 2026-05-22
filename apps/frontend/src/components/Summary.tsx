@@ -11,13 +11,19 @@ interface SummaryResponse {
 interface SummaryProps {
   sessionId: string;
   demoData?: SummaryResponse | null;
+  onSummaryGenerated?: (data: SummaryResponse) => void;
+  onTopicClick?: (topic: string) => void;
+  readOnly?: boolean; // When true: auto-shows saved data, hides Generate button
 }
 
-export const Summary: React.FC<SummaryProps> = ({ sessionId, demoData }) => {
+export const Summary: React.FC<SummaryProps> = ({ sessionId, demoData, onSummaryGenerated, onTopicClick, readOnly }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [exporting, setExporting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<SummaryResponse | null>(null);
+  const [data, setData] = useState<SummaryResponse | null>(
+    // In readOnly mode, pre-populate immediately from demoData (the saved DB summary)
+    readOnly && demoData ? demoData : null
+  );
 
   const generateSummary = async () => {
     setLoading(true);
@@ -29,6 +35,7 @@ export const Summary: React.FC<SummaryProps> = ({ sessionId, demoData }) => {
       setTimeout(() => {
         setData(demoData);
         setLoading(false);
+        onSummaryGenerated?.(demoData);
       }, 800);
       return;
     }
@@ -49,6 +56,7 @@ export const Summary: React.FC<SummaryProps> = ({ sessionId, demoData }) => {
 
       const result: SummaryResponse = await response.json();
       setData(result);
+      onSummaryGenerated?.(result);
     } catch (err: any) {
       console.error("Summary generation error:", err);
       setError(err.message || "An unexpected error occurred while generating the summary.");
@@ -102,13 +110,15 @@ export const Summary: React.FC<SummaryProps> = ({ sessionId, demoData }) => {
       <div className="summary-header">
         <h2>AI Summary</h2>
         <div style={{ display: "flex", gap: "1rem" }}>
-          <button 
-            className="btn btn-primary" 
-            onClick={generateSummary} 
-            disabled={loading || exporting}
-          >
-            {loading ? "Generating..." : "Generate Summary"}
-          </button>
+          {!readOnly && (
+            <button 
+              className="btn btn-primary" 
+              onClick={generateSummary} 
+              disabled={loading || exporting}
+            >
+              {loading ? "Generating..." : "Generate Summary"}
+            </button>
+          )}
           
           {data && (
             <button 
@@ -147,7 +157,19 @@ export const Summary: React.FC<SummaryProps> = ({ sessionId, demoData }) => {
               <h3>Topics Discussed</h3>
               <div className="topics-container">
                 {data.topics.map((topic, idx) => (
-                  <span key={idx} className="topic-tag">{topic}</span>
+                  <span 
+                    key={idx} 
+                    className="topic-tag"
+                    onClick={() => onTopicClick?.(topic)}
+                    style={{ 
+                      cursor: onTopicClick ? "pointer" : "default",
+                      transition: "all 0.2s",
+                    }}
+                    onMouseOver={(e) => { if (onTopicClick) { e.currentTarget.style.transform = "scale(1.05)"; e.currentTarget.style.background = "#38bdf8"; e.currentTarget.style.color = "#0f172a"; } }}
+                    onMouseOut={(e) => { if (onTopicClick) { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.background = "rgba(56, 189, 248, 0.1)"; e.currentTarget.style.color = "#38bdf8"; } }}
+                  >
+                    {topic}
+                  </span>
                 ))}
               </div>
             </div>

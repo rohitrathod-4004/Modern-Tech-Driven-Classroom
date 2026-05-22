@@ -7,6 +7,10 @@ interface RecorderProps {
   chunksProcessed: number;
   onNewChunk: (index: number, text: string, status: "live" | "offline" | "synced") => void;
   onResetSession: () => void;
+  onRecordingStop?: () => void;
+  onRecordingStateChange?: (isRecording: boolean) => void;
+  isDemo?: boolean;
+  onSaveDemo?: () => void;
 }
 
 interface QueueItem {
@@ -22,8 +26,16 @@ export const Recorder: React.FC<RecorderProps> = ({
   chunksProcessed,
   onNewChunk,
   onResetSession,
+  onRecordingStop,
+  onRecordingStateChange,
+  isDemo,
+  onSaveDemo,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
+
+  useEffect(() => {
+    onRecordingStateChange?.(isRecording);
+  }, [isRecording, onRecordingStateChange]);
   const [language, setLanguage] = useState("en");
   const [error, setError] = useState<string | null>(null);
   const [duration, setDuration] = useState<number>(0);
@@ -62,6 +74,17 @@ export const Recorder: React.FC<RecorderProps> = ({
       window.removeEventListener("offline", goOffline);
     };
   }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isRecording) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isRecording]);
 
   useEffect(() => {
     if (isRecording) {
@@ -230,6 +253,8 @@ export const Recorder: React.FC<RecorderProps> = ({
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
     }
+    // Notify parent that recording has stopped (triggers session completion)
+    onRecordingStop?.();
   };
 
   const handleNewSessionClick = () => {
@@ -281,12 +306,23 @@ export const Recorder: React.FC<RecorderProps> = ({
         </div>
 
         {!isRecording ? (
-          <button className="btn btn-start" onClick={startRecording}>
-            Start Recording
-          </button>
+          <>
+            <button className="btn btn-start" onClick={startRecording}>
+              Start Recording
+            </button>
+            {isDemo && onSaveDemo && (
+              <button 
+                className="btn btn-stop" 
+                onClick={onSaveDemo}
+                style={{ background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "white", boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)" }}
+              >
+                Save & Complete Demo
+              </button>
+            )}
+          </>
         ) : (
           <button className="btn btn-stop" onClick={stopRecording}>
-            Stop Recording
+            End & Complete Lecture
           </button>
         )}
 

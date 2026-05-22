@@ -1,0 +1,1046 @@
+AI CLASSROOM INTELLIGENCE
+PLATFORM
+Complete Professional Development Plan
+System Architecture  |  Database Design  |  AI/RAG Pipelines  |  Implementation Roadmap
+Principal Engineer Edition — v1.0
+Table of Contents
+1.  Section 1 — System Redesign & Architecture
+2.  Section 2 — Database Design
+3.  Section 3 — Authentication System
+4.  Section 4 — AI Architecture & Pipelines
+5.  Section 5 — Smart Timeline System
+6.  Section 6 — API Design
+7.  Section 7 — Frontend Design
+8.  Section 8 — Implementation Roadmap
+9.  Section 9 — Productionization
+10.  Section 10 — Codebase Organization
+11.  Section 11 — Risks & Challenges
+12.  Section 12 — Final Recommendations
+Section 1 — System Redesign & Architecture
+1.1 Overall Architecture Philosophy
+The upgraded architecture follows a Modular Monolith-First approach: strong internal module boundaries with well-defined interfaces, but deployed as a small number of services (not dozens of microservices). This gives you the speed of a monolith with the upgrade path of microservices.
+Architecture Principles
+  Modular monolith on the backend — clean module boundaries without over-segmentation
+  Domain-driven folder structure — auth, courses, lectures, transcripts, ai, search
+  Service-layer pattern — business logic lives in services, not route handlers
+  Repository pattern — data access abstracted behind repositories
+  Event-driven processing — async AI pipelines decoupled from request/response cycle
+  Contract-first API design — TypeScript interfaces shared between frontend and backend
+1.2 High-Level System Architecture
+The system is composed of four primary runtime processes:
+Service
+Responsibility
+Frontend (React SPA)
+UI rendering, recording, offline storage, API consumption
+Node.js Backend API
+Auth, orchestration, business logic, DB access, AI pipeline triggering
+Python AI Microservice
+Whisper transcription, LLM summarization, embedding generation
+MongoDB
+Primary data store for all persistent entities
+Vector Store (Qdrant)
+Semantic embeddings for RAG and semantic search
+1.3 Data Flow — Complete Request Lifecycle
+Recording & Transcription Flow
+1. Student starts recording — MediaRecorder captures mic at 3-second chunks.
+2. Each chunk is compressed and persisted to IndexedDB immediately (offline-first).
+3. Upload queue picks up chunks and POST to /api/lectures/:id/chunks with JWT auth.
+4. Node.js validates auth, associates chunk with lecture+user, saves metadata to MongoDB.
+5. Node.js streams WAV to Python AI service via internal HTTP.
+6. Whisper transcribes and returns text + timestamps + language.
+7. Node.js stores TranscriptChunk document in MongoDB with position/timestamp metadata.
+8. Frontend polls GET /api/lectures/:id/transcript and renders incrementally.
+9. After lecture ends, backend triggers async AI pipeline: summarization + embedding generation.
+10. AI service generates embeddings using sentence-transformers and upserts to Qdrant.
+1.4 Frontend Architecture
+The frontend follows a feature-sliced architecture with clear separation between infrastructure code (API clients, stores) and feature code (recording, dashboard, classroom, assistant).
+Frontend Layers
+  Pages Layer — Route-level components (Dashboard, Lecture, Course, Assistant)
+  Feature Layer — Self-contained feature modules with their own state and components
+  Shared Layer — Reusable components, hooks, utilities
+  Infrastructure Layer — API client (Axios), IndexedDB service, Auth context
+  State Layer — Zustand stores per domain (auth, lecture, transcript, UI)
+1.5 Backend Architecture
+The Node.js backend uses a layered architecture: Routes → Controllers → Services → Repositories → Models. This prevents business logic from leaking into route handlers and makes unit testing practical.
+Layer
+Responsibility
+Routes
+HTTP method + path binding, middleware chain
+Controllers
+Request validation, response shaping, error handling
+Services
+Business logic, orchestration, domain rules
+Repositories
+MongoDB queries, data access abstraction
+Models (Mongoose)
+Schema definition, document methods
+Middleware
+Auth verification, rate limiting, request logging
+Queue Workers
+Async AI pipeline jobs (Bull/BullMQ)
+1.6 AI Service Architecture
+The Python FastAPI service expands from pure Whisper transcription to a multi-capability AI service. Each capability is a separate router/module, allowing independent scaling if needed.
+AI Service Modules
+  /transcribe — Whisper inference (faster-whisper, CTranslate2)
+  /summarize — LLM-powered lecture summarization
+  /quiz — MCQ and short-answer generation from transcript
+  /embed — Sentence embedding generation for RAG
+  /search — Semantic similarity search (proxies Qdrant queries)
+  /chat — RAG-based chat completion with context injection
+1.7 RAG Architecture Overview
+The Retrieval-Augmented Generation system is the heart of the AI assistant. It enables students to ask natural language questions and receive answers grounded in actual lecture content.
+Ingestion Pipeline: After each lecture session ends, transcript chunks are split into semantic units (~300 tokens with 50-token overlap).
+Embedding: Each chunk is embedded using sentence-transformers/all-MiniLM-L6-v2 or text-embedding-3-small (OpenAI).
+Storage: Embeddings + metadata (lecture_id, course_id, timestamp, chunk_text) are stored in Qdrant.
+Retrieval: On assistant query, the question is embedded and top-K most similar chunks are retrieved.
+Augmentation: Retrieved chunks are injected as context into an LLM prompt.
+Generation: LLM generates a grounded, cited response. References to lecture timestamps are included.
+Section 2 — Database Design
+2.1 Design Philosophy
+MongoDB is well-suited here because lecture data is naturally document-shaped: transcripts are arrays of chunks, lectures have rich metadata, and query patterns are known upfront. The schema is denormalized where reads are hot (e.g., transcript chunks embed speaker position) and normalized where data is shared (users, courses).
+2.2 User Schema
+// users collection
+{
+  _id: ObjectId,
+  email: String (unique, indexed),
+  passwordHash: String,
+  name: String,
+  role: 'student' | 'teacher' | 'admin',
+  enrolledCourses: [ObjectId],   // ref: courses
+  createdAt: Date,
+  updatedAt: Date,
+  lastLoginAt: Date,
+  isActive: Boolean,
+  preferences: {
+    language: String,
+    notificationsEnabled: Boolean
+  },
+  // Indexes: email (unique), role
+}
+2.3 Course Schema
+// courses collection
+{
+  _id: ObjectId,
+  title: String,
+  description: String,
+  teacherId: ObjectId,          // ref: users
+  enrollmentCode: String (unique, indexed),
+  students: [ObjectId],         // ref: users
+  lectures: [ObjectId],         // ref: lectures
+  isActive: Boolean,
+  createdAt: Date,
+  updatedAt: Date,
+  // Indexes: teacherId, enrollmentCode (unique)
+}
+2.4 Lecture Schema
+// lectures collection
+{
+  _id: ObjectId,
+  courseId: ObjectId,           // ref: courses
+  teacherId: ObjectId,          // ref: users
+  title: String,
+  description: String,
+  status: 'recording' | 'processing' | 'ready' | 'failed',
+  language: String,             // detected language code
+  startedAt: Date,
+  endedAt: Date,
+  durationSeconds: Number,
+  chunkCount: Number,
+  aiProcessingStatus: {
+    summarized: Boolean,
+    embedded: Boolean,
+    quizGenerated: Boolean,
+  },
+  // Indexes: courseId, teacherId, status, startedAt
+}
+2.5 TranscriptChunk Schema
+// transcript_chunks collection
+{
+  _id: ObjectId,
+  lectureId: ObjectId,          // ref: lectures
+  courseId: ObjectId,           // ref: courses (denormalized for query perf)
+  chunkIndex: Number,           // ordering
+  text: String,
+  startTime: Number,            // seconds from lecture start
+  endTime: Number,
+  language: String,
+  confidence: Number,           // Whisper confidence score
+  isEmbedded: Boolean,          // has been sent to vector store
+  createdAt: Date,
+  // Indexes: lectureId + chunkIndex (compound unique), lectureId, isEmbedded
+}
+2.6 Summary Schema
+// summaries collection
+{
+  _id: ObjectId,
+  lectureId: ObjectId,          // ref: lectures (unique)
+  courseId: ObjectId,
+  generatedBy: 'gpt-4o-mini' | 'claude-haiku' | string,
+  summary: String,              // full lecture summary
+  keyPoints: [String],          // bullet-point key takeaways
+  concepts: [String],           // important terms/concepts
+  revisedNotes: String,         // formatted study notes
+  generatedAt: Date,
+  // Index: lectureId (unique)
+}
+2.7 Quiz & Flashcard Schemas
+// quizzes collection
+{
+  _id: ObjectId,
+  lectureId: ObjectId,
+  courseId: ObjectId,
+  questions: [{
+    type: 'mcq' | 'short_answer',
+    question: String,
+    options: [String],           // for MCQ
+    answer: String,
+    explanation: String,
+    sourceChunkIndex: Number,    // which transcript chunk sourced this
+  }],
+  generatedAt: Date,
+}
+// flashcards collection
+{
+  _id: ObjectId,
+  lectureId: ObjectId,
+  courseId: ObjectId,
+  cards: [{ front: String, back: String, concept: String }],
+  generatedAt: Date,
+}
+2.8 Chat History Schema
+// chat_sessions collection
+{
+  _id: ObjectId,
+  userId: ObjectId,
+  courseId: ObjectId,            // assistant context scope
+  lectureId: ObjectId,           // optional — scoped to single lecture
+  messages: [{
+    role: 'user' | 'assistant',
+    content: String,
+    sourceChunks: [ObjectId],    // transcript chunks used as context
+    createdAt: Date,
+  }],
+  createdAt: Date,
+  updatedAt: Date,
+  // Indexes: userId + courseId, userId + lectureId
+}
+2.9 Indexing Strategy
+Collection
+Key Indexes
+users
+email (unique), role
+courses
+teacherId, enrollmentCode (unique)
+lectures
+courseId + status, teacherId, startedAt (desc)
+transcript_chunks
+lectureId + chunkIndex (compound unique), isEmbedded
+summaries
+lectureId (unique)
+quizzes
+lectureId
+chat_sessions
+userId + courseId, userId + lectureId
+2.10 Vector Store Schema (Qdrant)
+Each point in Qdrant represents a semantic chunk of transcript text. The payload carries rich metadata to enable filtered retrieval.
+// Qdrant point structure
+{
+  id: UUID,                     // generated, stored back in transcript_chunks
+  vector: float[384],           // MiniLM embedding or float[1536] for OpenAI
+  payload: {
+    chunk_mongo_id: String,     // ref back to MongoDB transcript_chunks._id
+    lecture_id: String,
+    course_id: String,
+    teacher_id: String,
+    text: String,               // original chunk text (avoid re-fetching Mongo)
+    start_time: Number,
+    end_time: Number,
+    chunk_index: Number,
+    language: String,
+  }
+}
+// Collection per environment: lecture_chunks_prod / lecture_chunks_dev
+// Filtered search: filter by course_id or lecture_id before vector similarity
+Section 3 — Authentication System Design
+3.1 JWT Architecture Overview
+Authentication uses a dual-token strategy: a short-lived access token (15 minutes) and a long-lived refresh token (7 days). This balances security (limited access token window) with UX (no re-login every 15 minutes).
+Token
+TTL / Storage / Purpose
+Access Token (JWT)
+TTL: 15 min | Storage: Memory (JS var) | Used on every API call
+Refresh Token
+TTL: 7 days | Storage: HttpOnly Secure Cookie | Used to mint new access tokens
+Why NOT localStorage for tokens?
+  localStorage is accessible by any JS on the page — XSS attacks can steal tokens.
+  Refresh tokens in HttpOnly cookies cannot be read by JavaScript at all.
+  Access tokens in memory are lost on tab close — acceptable since refresh token handles renewal.
+3.2 Registration & Login Flow
+POST /api/auth/register
+Body: { name, email, password, role: 'student'|'teacher' }
+Flow:
+  1. Validate input (Zod schema)
+  2. Check email uniqueness
+  3. Hash password (bcrypt, 12 rounds)
+  4. Create User document
+  5. Generate accessToken + refreshToken
+  6. Set refreshToken as HttpOnly cookie
+  7. Return accessToken + user profile in body
+POST /api/auth/login
+Flow:
+  1. Find user by email
+  2. Compare password (bcrypt.compare)
+  3. Generate new token pair
+  4. Set cookie + return access token
+3.3 Token Refresh Flow
+POST /api/auth/refresh
+Flow:
+  1. Read refreshToken from HttpOnly cookie
+  2. Verify JWT signature + expiry
+  3. Load user from DB (check isActive)
+  4. Generate new accessToken (optionally rotate refreshToken)
+  5. Return new accessToken in body
+Frontend Interceptor (Axios):
+  - On 401 response, auto-call /auth/refresh
+  - Retry original request with new token
+  - If refresh also fails, redirect to /login
+3.4 Role-Based Access Control
+Role
+Permissions
+Student
+View enrolled courses, join course by code, view lecture transcripts/summaries, use AI assistant, take quizzes
+Teacher
+All student permissions + create courses, start recordings, manage lectures, view all students in their courses
+Admin
+All permissions + user management, system-wide course management
+3.5 Auth Middleware
+// authenticate.ts — verifies JWT on every protected route
+export const authenticate = async (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'No token' });
+  const payload = jwt.verify(token, process.env.JWT_SECRET);
+  req.user = await UserRepository.findById(payload.sub);
+  next();
+};
+// authorize.ts — checks role
+export const authorize = (...roles: string[]) => (req, res, next) => {
+  if (!roles.includes(req.user.role)) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+};
+// Usage:
+router.post('/courses', authenticate, authorize('teacher', 'admin'), createCourse);
+router.get('/lectures/:id', authenticate, authorize('student','teacher','admin'), getLecture);
+3.6 Resource Ownership Guards
+Beyond role checks, ownership guards ensure a teacher can only modify their own courses, and a student can only view lectures from courses they're enrolled in. These are implemented as service-layer checks, not just middleware.
+// In CourseService.ts
+async addLecture(courseId, teacherId, data) {
+  const course = await this.courseRepo.findById(courseId);
+  if (!course) throw new NotFoundError('Course not found');
+  if (course.teacherId.toString() !== teacherId) {
+    throw new ForbiddenError('Not the course owner');
+  }
+  // proceed...
+}
+Section 4 — AI Architecture & Pipelines
+4.1 Post-Lecture AI Pipeline
+When a lecture recording ends (teacher clicks Stop), the backend enqueues an async job. This decouples the heavy AI work from the user-facing request cycle. The pipeline runs in the background and updates the lecture's aiProcessingStatus flags as each stage completes.
+Post-Lecture AI Pipeline Stages
+  Stage 1 — Transcript Assembly: Fetch all TranscriptChunks for lecture, join into full text
+  Stage 2 — Semantic Chunking: Re-split into ~300-token chunks with 50-token overlap for RAG
+  Stage 3 — Embedding Generation: Batch embed all chunks via sentence-transformers
+  Stage 4 — Qdrant Upsert: Store vectors + metadata in Qdrant collection
+  Stage 5 — Summarization: Send full transcript to LLM, extract summary/keyPoints/concepts
+  Stage 6 — Quiz Generation: Send transcript sections to LLM, generate MCQs + short answers
+  Stage 7 — Flashcard Generation: Generate concept-answer cards from key concepts
+  Stage 8 — Status Update: Mark lecture aiProcessingStatus fields as complete in MongoDB
+4.2 Chunking Strategy
+Chunking strategy is critical for RAG quality. Too small = no context. Too large = retrieval noise.
+Chunk Type
+Configuration
+Raw Transcript Chunks
+3-second audio chunks from Whisper (preserved as-is in MongoDB)
+Semantic RAG Chunks
+~300 tokens per chunk, 50-token overlap, sentence-boundary aware
+Summary Input
+Full transcript concatenated (for lecture-level summaries)
+Quiz Input
+Topic segments (~1000 tokens each, for topic-specific question generation)
+4.3 Embedding Pipeline
+# embed.py — batch embedding endpoint
+@router.post('/embed')
+async def generate_embeddings(req: EmbedRequest):
+    model = SentenceTransformer('all-MiniLM-L6-v2')  # 384-dim, fast, good quality
+    embeddings = model.encode(req.texts, batch_size=32, normalize_embeddings=True)
+    return { 'embeddings': embeddings.tolist() }
+# For higher quality (if budget allows):
+# Use OpenAI text-embedding-3-small (1536-dim) via API
+# Cost: $0.02 per 1M tokens — very affordable for lecture text
+4.4 Summarization Pipeline
+# summarize.py
+SYSTEM_PROMPT = '''You are an expert educational assistant.
+Analyze the lecture transcript and return JSON with:
+{
+  summary: string,        // 3-5 paragraph lecture summary
+  keyPoints: string[],    // 5-10 bullet point takeaways
+  concepts: string[],     // important terms and concepts
+  revisedNotes: string    // formatted study notes in markdown
+}
+Return ONLY valid JSON, no other text.'''
+@router.post('/summarize')
+async def summarize_lecture(req: SummarizeRequest):
+    response = await llm_client.chat.completions.create(
+        model='gpt-4o-mini',   # cost-efficient, good quality
+        messages=[
+            { 'role': 'system', 'content': SYSTEM_PROMPT },
+            { 'role': 'user', 'content': f'Transcript:\n{req.transcript}' }
+        ],
+        response_format={ 'type': 'json_object' }
+    )
+    return json.loads(response.choices[0].message.content)
+4.5 RAG Assistant Pipeline
+The AI assistant pipeline implements Retrieval-Augmented Generation. Every student query goes through retrieval before generation — ensuring answers are grounded in actual lecture content.
+# chat.py — RAG pipeline
+@router.post('/chat')
+async def rag_chat(req: ChatRequest):
+    # 1. Embed the user's question
+    q_embedding = embed_model.encode([req.question])[0]
+    # 2. Retrieve top-K similar chunks from Qdrant
+    results = qdrant.search(
+        collection_name='lecture_chunks',
+        query_vector=q_embedding,
+        query_filter=Filter(must=[
+            FieldCondition(key='course_id', match=MatchValue(value=req.course_id))
+        ]),
+        limit=5
+    )
+    # 3. Build context from retrieved chunks
+    context_parts = []
+    for r in results:
+        p = r.payload
+        context_parts.append(
+            f'[Lecture {p[lecture_id]}, ~{int(p[start_time])}s]: {p[text]}'
+        )
+    context = '\n\n'.join(context_parts)
+    # 4. Build prompt with context
+    messages = [
+        { 'role': 'system', 'content': RAG_SYSTEM_PROMPT },
+        *req.history[-6:],       # last 3 turns for continuity
+        { 'role': 'user', 'content': f'Context:\n{context}\n\nQuestion: {req.question}' }
+    ]
+    # 5. Generate response
+    response = await llm_client.chat.completions.create(
+        model='gpt-4o-mini', messages=messages, max_tokens=800
+    )
+    return { 'answer': response.choices[0].message.content, 'sources': results }
+4.6 LLM & Model Recommendations
+Use Case
+Recommended Model
+Transcription
+faster-whisper (medium or large-v2 model) — self-hosted, no cost per call
+Embeddings (self-hosted)
+sentence-transformers/all-MiniLM-L6-v2 — 384-dim, fast, free
+Embeddings (API, higher quality)
+OpenAI text-embedding-3-small — $0.02/1M tokens
+Summarization & Quiz Gen
+GPT-4o-mini — best cost/quality ratio for structured output
+RAG Chat (cost-sensitive)
+GPT-4o-mini — ~$0.15/1M input tokens
+RAG Chat (quality-first)
+Claude claude-haiku or GPT-4o — higher quality, higher cost
+Vector Store
+Qdrant (self-hosted Docker) — best OSS option, good filtering support
+4.7 Quiz Generation Pipeline
+# quiz.py — structured quiz generation
+QUIZ_PROMPT = '''Generate quiz questions from the lecture section.
+Return JSON: { questions: [{ type: 'mcq'|'short_answer', question, options, answer, explanation }] }
+Generate 5-8 questions. Focus on key concepts and understanding, not trivia.'''
+# Strategy: split transcript into topic segments (~1000 tokens each)
+# Generate questions per segment, then merge and deduplicate
+# This prevents the LLM from focusing only on the beginning of long transcripts
+Section 5 — Smart Timeline System
+5.1 Architecture Overview
+The smart timeline synchronizes the transcript with time positions, enabling students to navigate, search, and jump to specific moments. It is built entirely from the timestamp data already captured by Whisper.
+5.2 Timestamp Data Model
+Each TranscriptChunk already stores startTime and endTime (seconds from lecture start). The timeline is a derived view of these chunks.
+// TranscriptChunk (already in DB)
+{ chunkIndex, text, startTime, endTime, lectureId }
+// Timeline entry (computed, sent to frontend)
+{
+  chunkIndex: number,
+  text: string,
+  startTime: number,  // seconds
+  endTime: number,
+  isHighlighted: boolean,  // matches search query
+  topicLabel: string | null,  // AI-detected topic (optional)
+}
+5.3 Frontend Timeline Implementation
+The timeline component is a scrollable list of transcript chunks with time labels. It uses a virtualized list (react-virtual) for performance with long lectures. The audio player position drives the active chunk highlight via a useEffect that finds the chunk whose time range contains the current playback position.
+Timeline Features
+  Click-to-seek: Clicking a chunk calls onSeek(chunk.startTime) which updates audio player
+  Auto-scroll: Active chunk (based on audio position) scrolls into view automatically
+  Inline search: Filter bar highlights matching chunks and scrolls to first match
+  Topic badges: AI-detected topic labels shown as colored badges on chunk groups
+  Copy button: Click chunk to copy text to clipboard
+  Share timestamp: Generate sharable link with ?t=seconds parameter
+5.4 Topic Segmentation
+For lectures that have been AI-processed, the summarization pipeline also identifies topic boundaries. These are stored in the summary document and overlaid on the timeline as visual dividers.
+// In summarize prompt, also request:
+topicSegments: [{
+  title: string,         // e.g. 'Introduction to Recursion'
+  startChunkIndex: number,
+  endChunkIndex: number
+}]
+// Frontend renders dividers between chunk groups
+// Each segment group gets a sticky topic header label
+5.5 Search Implementation
+Timeline search is a client-side text filter (for instant UX) plus a server-side semantic search (for finding conceptually similar content). The two modes are toggled with a UI control.
+Search Mode
+Implementation
+Text search (instant)
+Client-side: filter transcript chunk texts by keyword, highlight matches
+Semantic search
+Server call to /api/search?q=query&lectureId=x — returns chunks sorted by similarity
+Cross-lecture search
+Server call to /api/search?q=query&courseId=x — searches across all lectures
+Section 6 — API Design
+6.1 API Design Principles
+RESTful resource naming (plural nouns, no verbs in URL)
+Consistent error envelope: { error: string, code: string, details?: any }
+Consistent success envelope: { data: T, meta?: { page, limit, total } }
+JWT Bearer token on all non-auth routes
+Zod validation on all request bodies
+Rate limiting on sensitive endpoints (auth, AI)
+6.2 Auth APIs
+Endpoint
+Description
+POST /api/auth/register
+Register new user (student or teacher)
+POST /api/auth/login
+Login, receive access token + set refresh cookie
+POST /api/auth/refresh
+Exchange refresh cookie for new access token
+POST /api/auth/logout
+Clear refresh cookie server-side
+GET /api/auth/me
+Get current user profile (auth required)
+6.3 Course APIs
+Endpoint
+Description
+POST /api/courses
+Create course (teacher only)
+GET /api/courses
+List courses (teacher: own courses, student: enrolled)
+GET /api/courses/:id
+Get course details + lecture list
+POST /api/courses/:id/enroll
+Student enrolls with enrollment code
+GET /api/courses/:id/students
+List enrolled students (teacher only)
+6.4 Lecture APIs
+Endpoint
+Description
+POST /api/courses/:courseId/lectures
+Create/start a lecture session (teacher)
+GET /api/lectures/:id
+Get lecture details + status
+POST /api/lectures/:id/end
+Mark lecture as ended, trigger AI pipeline (teacher)
+DELETE /api/lectures/:id
+Delete lecture (teacher/admin)
+GET /api/lectures/:id/transcript
+Get full transcript chunks (paginated)
+POST /api/lectures/:id/chunks
+Upload audio chunk (teacher, during recording)
+6.5 AI Content APIs
+Endpoint
+Description
+GET /api/lectures/:id/summary
+Get lecture summary, key points, concepts
+GET /api/lectures/:id/quiz
+Get generated quiz questions
+GET /api/lectures/:id/flashcards
+Get flashcards
+POST /api/lectures/:id/regenerate
+Re-trigger AI pipeline (teacher)
+6.6 AI Assistant & Search APIs
+Endpoint
+Description
+POST /api/assistant/chat
+Send message, get RAG response. Body: { message, courseId, lectureId?, history }
+GET /api/assistant/history/:courseId
+Get chat history for a course
+GET /api/search?q=&courseId=
+Semantic search across course lectures
+GET /api/search?q=&lectureId=
+Semantic search within a single lecture
+6.7 Example API Response Shapes
+// GET /api/lectures/:id/summary — Response
+{
+  data: {
+    lectureId: string,
+    summary: string,
+    keyPoints: string[],
+    concepts: string[],
+    revisedNotes: string,
+    generatedAt: string,
+  }
+}
+// POST /api/assistant/chat — Response
+{
+  data: {
+    answer: string,
+    sources: [{
+      chunkId: string,
+      text: string,
+      startTime: number,
+      lectureId: string,
+      lectureTitle: string,
+    }]
+  }
+}
+Section 7 — Frontend Design
+7.1 Application Routes & Pages
+Route
+Page / Purpose
+/
+Landing / Marketing page
+/login
+Login form
+/register
+Registration (student or teacher)
+/dashboard
+Home — recent lectures, courses, activity
+/courses
+Course list (enrolled or owned)
+/courses/:id
+Course detail — lecture list, students
+/courses/:id/record
+Recording interface (teacher only)
+/lectures/:id
+Lecture viewer — transcript, timeline, AI tabs
+/lectures/:id/quiz
+Quiz taking interface
+/assistant
+AI assistant chat (course-scoped)
+/search
+Global search page
+7.2 Lecture Viewer Page
+The lecture viewer is the most complex page. It's built as a tabbed interface with the timeline always visible on the left/side, and the active tab content on the right.
+Lecture Viewer Layout
+  Left Panel (30%): Smart Timeline — scrollable, searchable transcript with timestamps
+  Right Panel (70%): Tabbed content area
+    Tab 1 — Transcript: Full text, copy, search highlight
+    Tab 2 — Summary: AI summary, key points, concepts
+    Tab 3 — Quiz: Generated questions, interactive quiz mode
+    Tab 4 — Flashcards: Flip-card UI for revision
+    Tab 5 — Assistant: Scoped AI chat for this lecture
+7.3 State Management
+Zustand is recommended over Redux for this scale. It's simpler, TypeScript-friendly, and has no boilerplate ceremony. Each domain gets its own store.
+Store
+State
+useAuthStore
+user, accessToken, isAuthenticated, login(), logout(), refresh()
+useLectureStore
+currentLecture, isRecording, chunkQueue, startRecording(), stopRecording()
+useTranscriptStore
+chunks[], isLoading, pollingInterval, fetchChunks()
+useAssistantStore
+messages[], isLoading, sessionId, sendMessage(), clearHistory()
+useSearchStore
+query, results[], isSearching, search()
+7.4 API Client Architecture
+// src/infrastructure/api/client.ts
+const apiClient = axios.create({ baseURL: import.meta.env.VITE_API_URL });
+// Request interceptor — attach access token
+apiClient.interceptors.request.use(config => {
+  const token = useAuthStore.getState().accessToken;
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+// Response interceptor — handle 401, auto-refresh
+apiClient.interceptors.response.use(
+  res => res,
+  async err => {
+    if (err.response?.status === 401 && !err.config._retry) {
+      err.config._retry = true;
+      await useAuthStore.getState().refresh(); // calls /auth/refresh
+      return apiClient(err.config);
+    }
+    return Promise.reject(err);
+  }
+);
+7.5 Offline & Recording Architecture
+The existing IndexedDB + MediaRecorder architecture is preserved. The new auth layer is threaded in: chunk upload requests include the Bearer token. If the token expires mid-recording, the interceptor refreshes transparently.
+7.6 Dashboard UX
+Dashboard Components
+  RecentLectures — last 5 lectures with status badges (Processing / Ready)
+  CourseList — enrolled/owned courses with lecture counts
+  QuickStats — total lectures, hours recorded, quizzes completed
+  ActivityFeed — recent AI processing completions, new lectures
+  SearchBar — prominent, jumps to /search page
+Section 8 — Implementation Roadmap
+8.1 Roadmap Overview
+The roadmap is structured as four phases over approximately 12-16 weeks. Each phase builds on the previous and leaves you with a shippable, stable system at the end.
+Phase Summary
+  Phase 1 (Weeks 1-3): Foundation — Auth, Users, Courses, Lectures, Dashboard
+  Phase 2 (Weeks 4-6): Transcription++  — Timeline, Transcript UX, Search
+  Phase 3 (Weeks 7-10): AI Intelligence — Summaries, Quiz, Flashcards, Embeddings
+  Phase 4 (Weeks 11-14): Production — RAG Assistant, Docker, Deployment, Polish
+Phase 1 — Foundation (Weeks 1-3)
+Goal: Replace the anonymous prototype with a real multi-user system. Nothing shipped publicly, but architecture is correct.
+Backend Tasks
+Set up JWT auth (register, login, refresh, logout)
+Create User model + AuthService + AuthController
+Create Course model + CRUD APIs (teacher-only creation)
+Create Lecture model with courseId association
+Add auth middleware to all existing chunk upload routes
+Ownership guards on lecture routes
+Add Zod validation to all controllers
+Add structured error handling middleware
+Environment config with dotenv (dev/prod separation)
+Frontend Tasks
+Login + Register pages with form validation
+JWT token management (Zustand auth store)
+Axios interceptor for token attachment + auto-refresh
+Protected routes (redirect to login if not authenticated)
+Basic dashboard shell (just layout, no data yet)
+Course creation form (teacher)
+Course join flow (student enrollment code)
+Update chunk upload to include Bearer token
+Phase 1 Deliverable
+A secure, multi-user system where teachers can create courses and students can join them. Recording still works, but now tied to a specific lecture + course + teacher.
+Phase 2 — Transcript UX & Timeline (Weeks 4-6)
+Goal: Make the transcription product genuinely useful and polished. This is the core product.
+Backend Tasks
+Enhance TranscriptChunk schema with better timestamp data
+Paginated GET /lectures/:id/transcript endpoint
+Lecture history API for dashboard
+Text search endpoint (MongoDB $text index on transcript)
+Frontend Tasks
+Dashboard with real lecture history (sorted by date)
+Lecture viewer page with tabbed layout
+Smart Timeline component (scrollable, time-labeled chunks)
+Client-side text search in timeline
+Transcript browsing (scroll through full transcript)
+Course detail page with lecture list
+Lecture status indicators (Recording / Processing / Ready)
+Better recording UI (timer, stop button, status)
+Phase 3 — AI Intelligence (Weeks 7-10)
+Goal: Add the AI layer. This is where the platform becomes differentiated.
+AI Service Tasks
+Expand FastAPI service with /summarize endpoint
+Add /embed endpoint (sentence-transformers)
+Add /quiz endpoint
+Add /flashcard endpoint
+Integrate Qdrant client (qdrant-client Python library)
+Implement embedding upsert to Qdrant
+Implement basic semantic search endpoint
+Backend Tasks
+Add Bull/BullMQ for async job queue
+Implement post-lecture AI pipeline job
+Summary API (GET + trigger)
+Quiz API (GET + trigger)
+Flashcard API (GET)
+Semantic search API (proxy to AI service)
+Lecture status webhook polling (AI pipeline completion)
+Frontend Tasks
+Summary tab in lecture viewer
+Key points display
+Quiz component (interactive MCQ + short answer)
+Flashcard flip component
+Semantic search in timeline (toggle button)
+AI processing status indicator (badge on lecture)
+Phase 4 — RAG Assistant & Production (Weeks 11-14)
+Goal: Ship the AI assistant and make the system production-ready.
+AI Service Tasks
+Implement /chat RAG endpoint
+Context window management (history truncation)
+Source citation in responses
+Backend Tasks
+Chat session creation + persistence (MongoDB)
+Chat history API
+Rate limiting on /assistant/chat (prevent abuse)
+Cross-lecture semantic search API
+Docker Compose setup (all services)
+Environment separation (dev/staging/prod configs)
+Frontend Tasks
+AI Assistant chat UI (floating or dedicated page)
+Source citation display (click to jump to transcript timestamp)
+Cross-lecture search page
+Dashboard polish + loading states + empty states
+Error handling UI (toast notifications)
+Mobile-responsive layout audit
+Phase
+Est. Complexity
+Phase 1 — Foundation
+Medium — auth is well-understood, but many moving parts
+Phase 2 — Transcript UX
+Low-Medium — mostly frontend, data model already exists
+Phase 3 — AI Intelligence
+High — new AI service capabilities, async queue, vector DB
+Phase 4 — RAG + Production
+High — RAG pipeline quality, Docker networking, deployment
+Section 9 — Productionization
+9.1 Docker Compose Architecture
+# docker-compose.yml — Full stack
+services:
+  frontend:
+    build: ./frontend
+    ports: ['3000:80']
+    environment: [VITE_API_URL=http://backend:4000]
+  backend:
+    build: ./backend
+    ports: ['4000:4000']
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/aicip
+      - AI_SERVICE_URL=http://ai-service:8000
+      - JWT_SECRET=${JWT_SECRET}
+      - REDIS_URL=redis://redis:6379
+    depends_on: [mongo, redis, ai-service]
+  ai-service:
+    build: ./ai-service
+    ports: ['8000:8000']
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - QDRANT_URL=http://qdrant:6333
+    volumes: ['./models:/app/models']   # cached Whisper models
+    deploy:
+      resources:
+        reservations:
+          devices: [{ driver: nvidia, count: 1, capabilities: [gpu] }]
+  mongo:
+    image: mongo:7
+    volumes: ['mongo_data:/data/db']
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: ['6333:6333']
+    volumes: ['qdrant_data:/qdrant/storage']
+  redis:
+    image: redis:7-alpine
+volumes: [mongo_data, qdrant_data]
+9.2 Environment Configuration
+Variable
+Description
+JWT_SECRET
+Strong random 256-bit secret for JWT signing
+REFRESH_TOKEN_SECRET
+Separate secret for refresh tokens
+MONGO_URI
+MongoDB connection string
+OPENAI_API_KEY
+OpenAI API key for LLM + embeddings
+QDRANT_URL
+Qdrant HTTP endpoint
+REDIS_URL
+Redis connection for Bull job queue
+AI_SERVICE_URL
+Internal URL of Python AI service
+NODE_ENV
+development | production | test
+CORS_ORIGIN
+Allowed frontend origin for CORS
+9.3 GPU Deployment Strategy
+For the Whisper AI service, GPU access dramatically reduces transcription latency. For v1, the simplest approach is a single GPU VM (e.g., AWS EC2 g4dn.xlarge or Google Cloud n1-standard-4 with T4 GPU). If GPU is unavailable, faster-whisper's CPU mode is still practical for medium models.
+Model Size
+CPU Time (per minute of audio)
+GPU Time
+tiny
+~2s
+~0.3s
+base
+~5s
+~0.6s
+medium
+~25s
+~2s
+large-v2
+~80s
+~5s
+9.4 Storage Strategy
+In v1, audio chunks are NOT stored long-term. Only transcripts are persisted. This keeps storage costs near-zero. If you need audio replay, use temporary chunk storage (delete after successful transcription) with a 24h TTL cleanup job.
+9.5 Monitoring & Logging
+Observability Stack
+  Logging: Pino (Node.js) + structlog (Python) — JSON structured logs
+  Error tracking: Sentry (free tier for startups)
+  Metrics: Basic — Bull queue depth, transcription latency, AI pipeline duration
+  Health checks: GET /health on backend and AI service (Docker healthcheck)
+  Uptime: UptimeRobot (free) for basic availability monitoring
+Section 10 — Codebase Organization
+10.1 Monorepo Structure
+ai-classroom-platform/
+├── frontend/              # React + Vite app
+├── backend/               # Node.js + Express API
+├── ai-service/            # Python FastAPI AI service
+├── shared/                # Shared TypeScript types/contracts
+├── docker-compose.yml
+├── docker-compose.prod.yml
+└── .env.example
+10.2 Backend Module Structure
+backend/src/
+├── modules/
+│   ├── auth/
+│   │   ├── auth.routes.ts
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   └── auth.schema.ts        # Zod schemas
+│   ├── courses/
+│   │   ├── course.routes.ts
+│   │   ├── course.controller.ts
+│   │   ├── course.service.ts
+│   │   └── course.repository.ts
+│   ├── lectures/
+│   ├── transcripts/
+│   ├── ai/                        # AI pipeline orchestration
+│   │   ├── ai.service.ts          # calls Python AI service
+│   │   ├── ai.queue.ts            # Bull queue definition
+│   │   └── ai.worker.ts           # job processor
+│   └── search/
+├── middleware/
+│   ├── authenticate.ts
+│   ├── authorize.ts
+│   ├── errorHandler.ts
+│   └── rateLimiter.ts
+├── models/                        # Mongoose schemas
+├── config/                        # env, db, queue setup
+├── lib/                           # shared utilities
+└── app.ts
+10.3 Frontend Feature Structure
+frontend/src/
+├── features/
+│   ├── auth/                # Login, Register, AuthGuard
+│   ├── dashboard/           # Dashboard page + widgets
+│   ├── courses/             # Course CRUD + enrollment
+│   ├── recording/           # MediaRecorder, ChunkQueue, IndexedDB
+│   ├── lecture-viewer/      # Transcript, Timeline, Tabs
+│   ├── ai-content/          # Summary, Quiz, Flashcards components
+│   └── assistant/           # Chat UI + history
+├── shared/
+│   ├── components/          # Button, Input, Modal, Badge, etc.
+│   ├── hooks/               # useDebounce, useLocalStorage, etc.
+│   └── utils/               # formatTime, truncate, etc.
+├── infrastructure/
+│   ├── api/                 # Axios client + endpoint functions
+│   ├── indexeddb/           # IDB service for offline chunks
+│   └── stores/              # Zustand stores
+└── pages/                   # Route-level wrappers
+10.4 AI Service Structure
+ai-service/
+├── app/
+│   ├── main.py
+│   ├── routers/
+│   │   ├── transcribe.py
+│   │   ├── summarize.py
+│   │   ├── embed.py
+│   │   ├── quiz.py
+│   │   └── chat.py
+│   ├── services/
+│   │   ├── whisper_service.py
+│   │   ├── llm_service.py
+│   │   ├── embedding_service.py
+│   │   └── qdrant_service.py
+│   ├── models/              # Pydantic request/response models
+│   └── config.py
+├── requirements.txt
+└── Dockerfile
+10.5 Shared Types
+shared/types/
+├── user.ts          # User, UserRole interfaces
+├── course.ts        # Course, EnrollmentCode interfaces
+├── lecture.ts       # Lecture, LectureStatus interfaces
+├── transcript.ts    # TranscriptChunk, Timeline interfaces
+├── ai.ts            # Summary, Quiz, Flashcard interfaces
+└── api.ts           # ApiResponse<T>, ApiError wrappers
+# Used by both frontend and backend (symlinked or via npm workspace)
+Section 11 — Risks & Challenges
+11.1 Risk Register
+Risk
+Cause
+Mitigation Strategy
+Whisper accuracy on accents/noise
+faster-whisper is strong but not perfect on noisy audio or heavy accents
+Use large-v2 model where GPU available; add confidence score threshold; allow manual transcript editing in UI
+FFmpeg disk I/O bottleneck
+Heavy writes/reads for every 3-second chunk
+Use /tmp ramdisk for FFmpeg temp files; pipeline directly from buffer; consider in-memory WebM-to-WAV conversion
+RAG quality degradation
+Poor chunking or embeddings lead to irrelevant context retrieval
+Experiment with chunk size; use chunk overlap; consider hybrid search (keyword + vector); evaluate retrieval quality with test set
+LLM API cost overrun
+Unexpected usage spikes or long transcripts increase API costs
+Set per-user daily limits; cache summaries/quiz (never regenerate if exists); monitor token usage; use GPT-4o-mini not GPT-4o
+Cold start latency on AI service
+Whisper model loading + sentence-transformer loading on first request can be 30-60s
+Pre-load all models at startup; use Docker healthcheck to wait for readiness; consider keeping warm with ping job
+MongoDB query performance
+Large transcript_chunks collections with no compound indexes
+Add compound indexes (lectureId+chunkIndex) on day one; paginate all transcript queries; add DB query monitoring
+Multilingual RAG challenges
+Embeddings from multilingual transcripts may have lower semantic alignment
+Use multilingual-e5-large-instruct embedding model; keep language metadata in Qdrant filter; query in same language
+Qdrant data loss
+Container restart wipes vectors if volume not configured correctly
+Always mount named Docker volume for Qdrant; add Qdrant snapshot job; test disaster recovery before launch
+Session security gaps
+Leaked refresh tokens allow persistent unauthorized access
+Short refresh token TTL (7 days); token rotation on every refresh; server-side refresh token denylist in Redis
+Concurrent recording conflicts
+Two devices recording same lecture creates duplicate chunks
+Enforce single active recording per lecture server-side; use lectureId lock in Redis during recording
+Section 12 — Final Recommendations
+12.1 Best Architecture Choices
+Decision
+Recommendation & Rationale
+Backend framework
+Keep Node.js/Express. It's working. Don't migrate.
+State management
+Zustand over Redux. Less boilerplate, same power for this scale.
+Job queue
+BullMQ over raw setTimeout. Persistent, retriable, monitorable.
+Embedding model
+Start with all-MiniLM-L6-v2 (free, fast). Upgrade to OpenAI ada if quality insufficient.
+LLM
+GPT-4o-mini for all AI content. Best cost/quality for structured outputs.
+Vector DB
+Qdrant over Pinecone. Self-hosted, no per-vector billing, good Python client.
+Auth storage
+HttpOnly cookie for refresh token. Non-negotiable for security.
+Async pipeline
+Decouple AI processing from lecture end. Never make users wait for LLM calls.
+12.2 Priority Order
+If you had to ship something usable in 3 weeks, this is the order:
+Auth + Course + Lecture model (users need identity before anything else)
+Basic dashboard (lecture history is the #1 daily-use feature)
+Smart Timeline (this is the core product differentiation vs just transcription)
+Summaries (highest perceived value for students, simplest to implement)
+Quiz generation (second highest perceived value)
+Semantic search (needed to make the knowledge base useful)
+RAG assistant (the 'wow' feature — save for last as it's the most complex)
+12.3 What NOT to Overengineer
+Avoid These Traps in V1
+  Do NOT build a microservices architecture. One Node.js process + one Python process is correct.
+  Do NOT add GraphQL. REST is simpler, debugging is easier, clients are well-understood.
+  Do NOT build a plugin system or abstract everything. YAGNI applies — build what you need.
+  Do NOT add a message broker (Kafka/RabbitMQ). Bull+Redis is sufficient for this workload.
+  Do NOT pre-optimize MongoDB queries. Add indexes when you have data to profile against.
+  Do NOT build a custom embedding model. Use sentence-transformers; it's production-quality.
+  Do NOT add caching layers before you measure what needs caching.
+12.4 MVP vs Future Scalability Balance
+The architecture described in this plan is deliberately designed at the intersection of 'shippable in weeks' and 'upgradeable without rewrite.' The key architectural choices that preserve future scalability:
+Service layer pattern in Node.js: you can extract any service into a microservice later without touching routes or models.
+Qdrant from day one: adding more vectors is free — no architectural change needed to scale semantic search.
+Bull queue: you can add more workers for AI processing without changing the API layer.
+Feature-sliced frontend: adding a new feature is isolated; it doesn't require touching other features.
+Shared TypeScript types: contract changes are caught at compile time, not at runtime.
+12.5 Startup-Grade Implementation Advice
+Principal Engineer Advice
+  Ship working software first. A complete, stable v1 is worth more than a partial v2.
+  Write integration tests for your AI pipeline. LLM outputs are non-deterministic — test the plumbing.
+  Log everything in the AI pipeline. When RAG answers are wrong, you need traceability.
+  Version your API from day one (/api/v1/...). You will regret it if you don't.
+  Guard your LLM API key religiously. One leaked key + one public demo = very large bill.
+  Build a simple admin page to view/debug AI pipeline jobs early. It saves hours of debugging.
+  Get real users (even 5 teachers) on the system before Phase 3. Their feedback will change priorities.
+  Keep your Whisper model size small (base or medium) during development. Use large-v2 in production.
+End of Development Plan — AI Classroom Intelligence Platform v1.0
+This document covers all 12 architectural sections in full detail. Implementation should proceed in the phase order described in Section 8.

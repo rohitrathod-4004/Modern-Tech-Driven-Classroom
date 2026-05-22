@@ -57,12 +57,14 @@ router.post("/upload-chunk", upload.single("file"), async (req: Request, res: Re
   console.log(`[upload] [${requestId}] session_id=${session_id} chunk_index=${chunk_index}`);
 
   let convertedPath: string | null = null;
+  let persistentChunkPath: string | null = null;
 
   try {
     // 1. Idempotency check BEFORE expensive processing
     const existingChunk = await TranscriptChunk.findOne({ session_id, chunk_index });
     if (existingChunk) {
       console.log(`[upload] [${requestId}] Duplicate chunk_${chunk_index} ignored.`);
+      deleteFileSafely(originalPath, requestId);
       res.json({
         text: existingChunk.text,
         latency_ms: 0,
@@ -71,9 +73,17 @@ router.post("/upload-chunk", upload.single("file"), async (req: Request, res: Re
       return;
     }
 
+    // Move file to session directory
+    const sessionDir = path.join(UPLOAD_DIR, "sessions", session_id);
+    if (!fs.existsSync(sessionDir)) {
+      fs.mkdirSync(sessionDir, { recursive: true });
+    }
+    persistentChunkPath = path.join(sessionDir, `chunk_${chunk_index}.webm`);
+    fs.renameSync(originalPath, persistentChunkPath);
+
     // 2. Convert to WAV (mono, 16kHz)
     console.log(`[upload] [${requestId}] Processing audio payload...`);
-    convertedPath = await convertToWav(originalPath);
+    convertedPath = await convertToWav(persistentChunkPath);
 
     // 3. Send to Python Whisper core
     const result = await transcribeAudio(convertedPath, language);
@@ -88,15 +98,20 @@ router.post("/upload-chunk", upload.single("file"), async (req: Request, res: Re
       { upsert: true, returnDocument: 'after' }
     );
 
+    const CHUNK_DURATION_SEC = 3;
     const firstSeg = result.segments && result.segments.length > 0 ? result.segments[0] : null;
     const lastSeg = result.segments && result.segments.length > 0 ? result.segments[result.segments.length - 1] : null;
+
+    const cumulativeOffset = chunk_index * CHUNK_DURATION_SEC;
+    const start_time = (firstSeg ? firstSeg.start : 0) + cumulativeOffset;
+    const end_time = (lastSeg ? lastSeg.end : CHUNK_DURATION_SEC) + cumulativeOffset;
 
     await TranscriptChunk.create({
       session_id,
       chunk_index,
       text: result.text || "",
-      start_time: firstSeg ? firstSeg.start : 0,
-      end_time: lastSeg ? lastSeg.end : 0,
+      start_time,
+      end_time,
     });
 
     // Trigger optimization sequence
@@ -110,7 +125,9 @@ router.post("/upload-chunk", upload.single("file"), async (req: Request, res: Re
     res.status(503).json({ error: "transcription_unavailable" });
   } finally {
     // 6. Final lifecycle cleanup guarantees
-    deleteFileSafely(originalPath, requestId);
+    if (fs.existsSync(originalPath)) {
+      deleteFileSafely(originalPath, requestId);
+    }
     if (convertedPath) {
       deleteFileSafely(convertedPath, requestId);
     }

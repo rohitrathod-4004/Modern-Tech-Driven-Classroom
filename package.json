@@ -1,0 +1,15 @@
+{
+  "name": "modern-tech-driven-classroom",
+  "version": "1.0.0",
+  "description": "Unified startup manager for AI Classroom Intelligence Platform",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm run dev --prefix apps/backend",
+    "dev:frontend": "npm run dev --prefix apps/frontend",
+    "dev:whisper": "python-services/whisper-service/venv/Scripts/python python-services/whisper-service/main.py",
+    "dev:all": "concurrently --kill-others \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:whisper\""
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
