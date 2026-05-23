@@ -336,4 +336,22 @@ export class LectureService {
 
     return nodes;
   }
+
+  static async deleteLecture(courseId: string, lectureId: string, teacherId: string) {
+    const course = await Course.findOne({ _id: courseId, teacherId, deletedAt: null }).lean();
+    if (!course) {
+      throw new AppError('Course not found or unauthorized', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    const lecture = await Lecture.findOne({ _id: lectureId, courseId, deletedAt: null });
+    if (!lecture) {
+      throw new AppError('Lecture not found', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    lecture.deletedAt = new Date();
+    lecture.isLive = false;
+    await lecture.save();
+
+    return lecture;
+  }
 }

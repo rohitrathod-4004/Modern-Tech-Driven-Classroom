@@ -77,7 +77,10 @@ export const Dashboard: React.FC = () => {
           {[1,2,3,4].map(i => <div key={i} className="h-32 rounded-xl bg-surface/50 border border-border"></div>)}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 relative z-10">
+        <div className={cn(
+          "grid gap-4 md:grid-cols-2 relative z-10",
+          user?.role === 'student' ? "lg:grid-cols-5" : "lg:grid-cols-4"
+        )}>
           <div className="rounded-lg border border-border/40 bg-card/80 backdrop-blur text-card-foreground transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/30 relative overflow-hidden group cursor-default">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <div className="p-5 flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
@@ -122,6 +125,25 @@ export const Dashboard: React.FC = () => {
               <p className="text-xs text-muted-foreground/70 mt-1">Lectures fully processed by AI</p>
             </div>
           </div>
+          {user?.role === 'student' && (
+            <div className="rounded-lg border border-border/40 bg-card/80 backdrop-blur text-card-foreground transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/5 hover:border-blue-500/30 relative overflow-hidden group cursor-default">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="p-5 flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <h3 className="tracking-tight text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Assignments Progress</h3>
+                <GraduationCap className="h-4 w-4 text-muted-foreground/50 group-hover:text-blue-500 transition-colors" />
+              </div>
+              <div className="p-5 pt-0 relative z-10">
+                <div className="text-2xl font-semibold tracking-tight">
+                  {((stats as any).assignmentsCount || 0) > 0 
+                    ? `${Math.round((((stats as any).submissionsCount || 0) / ((stats as any).assignmentsCount || 1)) * 100)}%`
+                    : '100%'}
+                </div>
+                <p className="text-xs text-muted-foreground/70 mt-1">
+                  {`${(stats as any).submissionsCount || 0} of ${(stats as any).assignmentsCount || 0} assignments done`}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
