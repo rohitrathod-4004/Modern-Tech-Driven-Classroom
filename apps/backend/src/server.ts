@@ -23,6 +23,7 @@ import adminRouter from "./modules/admin/admin.routes";
 import organizationRouter from "./modules/organization/organization.routes";
 import billingRouter from "./modules/billing/billing.routes";
 import analyticsRouter from "./modules/analytics/analytics.routes";
+import videoRouter from "./modules/video/video.routes";
 import { globalErrorHandler } from "./middleware/error.middleware";
 import { startLectureWorker } from "./infrastructure/queue/lecture.worker";
 import { recoverStrandedAIJobs } from "./infrastructure/queue/queue.recovery";
@@ -98,6 +99,7 @@ app.use("/api/search", searchRouter);
 app.use("/api/organizations", organizationRouter);
 app.use("/api/billing", billingRouter);
 app.use("/api/analytics", analyticsRouter);
+app.use("/api/video", videoRouter);
 app.use("/api", lectureRouter);
 
 // Legacy/Existing Routes (Preserved for backwards compatibility)

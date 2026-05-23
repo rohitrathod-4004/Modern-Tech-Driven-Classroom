@@ -10,7 +10,7 @@ export const Dashboard: React.FC = () => {
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate();
   const { stats, fetchStats, isLoading: statsLoading, error: statsError } = useDashboardStore();
-  const [isStarting, setIsStarting] = useState(false);
+  const [isStarting] = useState(false);
   const [recentLectures, setRecentLectures] = useState<any[]>([]);
 
   const defaultCourseId = user?.enrolledCourses?.[0] || '';

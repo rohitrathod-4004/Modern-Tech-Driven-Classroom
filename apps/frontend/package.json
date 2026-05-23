@@ -13,12 +13,14 @@
     "@classroom/shared": "*",
     "axios": "^1.16.1",
     "lucide-react": "^1.16.0",
-    "puppeteer": "^25.0.4",
+    "package.json": "^2.0.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.15.1",
     "react-virtuoso": "^4.18.7",
     "recharts": "^3.8.1",
+    "simple-peer": "^9.11.1",
+    "socket.io-client": "^4.8.3",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
@@ -26,6 +28,7 @@
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/simple-peer": "^9.11.9",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.5.0",
     "clsx": "^2.1.1",

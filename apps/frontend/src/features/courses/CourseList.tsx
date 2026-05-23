@@ -75,9 +75,9 @@ export function CourseList() {
               onClick={() => navigate(`/courses/${course.id}`)}
               className="group flex flex-col bg-surface border border-border rounded-xl p-6 hover:shadow-md transition-all hover:border-primary/50 cursor-pointer relative overflow-hidden"
             >
-              <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute top-4 right-4">
                 {isTeacher && (
-                  <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded">Code: {course.enrollmentCode}</span>
+                  <span className="text-xs font-mono bg-primary/10 text-primary px-2.5 py-1 rounded-lg border border-primary/20 font-semibold">Code: {course.enrollmentCode}</span>
                 )}
               </div>
               

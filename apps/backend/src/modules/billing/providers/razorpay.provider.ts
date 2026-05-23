@@ -51,7 +51,7 @@ class RazorpayProvider {
     };
 
     return new Promise((resolve, reject) => {
-      this.razorpay!.orders.create(options, (err, order) => {
+      this.razorpay!.orders.create(options, (err: any, order: any) => {
         if (err) return reject(new AppError('Failed to create Razorpay order', 500));
         resolve(order);
       });

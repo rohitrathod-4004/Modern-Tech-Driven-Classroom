@@ -32,6 +32,12 @@ export class LectureService {
       throw new AppError('Insufficient AI credits to start a lecture.', 402);
     }
 
+    // Auto-conclude any existing live lectures for this course to avoid multiple concurrent live lectures
+    await Lecture.updateMany(
+      { courseId, isLive: true, deletedAt: null },
+      { $set: { isLive: false, endedAt: new Date(), status: 'completed' } }
+    );
+
     const lecture = await Lecture.create({
       courseId,
       teacherId,
@@ -239,7 +245,7 @@ export class LectureService {
     }
 
     const liveLecture = await Lecture.findOne({ courseId, isLive: true, deletedAt: null })
-      .select('_id title startedAt liveStartedAt teacherId status')
+      .select('_id title startedAt liveStartedAt teacherId status isVideo')
       .lean();
 
     return liveLecture || null;

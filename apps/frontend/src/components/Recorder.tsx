@@ -8,7 +8,6 @@ interface RecorderProps {
   courseId: string;
   chunksProcessed: number;
   onNewChunk: (index: number, text: string, status: "live" | "offline" | "synced") => void;
-  onResetSession: () => void;
 }
 
 interface QueueItem {
@@ -26,7 +25,6 @@ export const Recorder: React.FC<RecorderProps> = ({
   courseId,
   chunksProcessed,
   onNewChunk,
-  onResetSession,
 }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [language, setLanguage] = useState("en");
@@ -180,8 +178,10 @@ export const Recorder: React.FC<RecorderProps> = ({
             title: `Live Lecture - ${new Date().toLocaleDateString()}`
           });
           currentLectureId = data.data._id;
-          setLectureId(currentLectureId);
-          activeLectureIdRef.current = currentLectureId;
+          if (currentLectureId) {
+            setLectureId(currentLectureId);
+            activeLectureIdRef.current = currentLectureId;
+          }
         } catch (err: any) {
           const msg = err.response?.data?.message || 'Failed to initialize lecture. Check AI credits.';
           setError(msg);
@@ -260,14 +260,7 @@ export const Recorder: React.FC<RecorderProps> = ({
     }
   };
 
-  const handleNewSessionClick = () => {
-    stopRecording();
-    chunkIndexRef.current = 0;
-    queueRef.current = [];
-    setDuration(0);
-    setError(null);
-    onResetSession();
-  };
+  // Unused handleNewSessionClick removed to fix TS6133
 
   const pendingCount = queueRef.current.filter((q) => q.status !== "done").length;
 

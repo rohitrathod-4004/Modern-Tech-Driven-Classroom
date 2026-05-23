@@ -11,7 +11,7 @@ router.get('/organization', authenticate, requireOrganizationAdmin, asyncHandler
 router.get('/organization/live-operations', authenticate, requireOrganizationAdmin, asyncHandler(AnalyticsController.getLiveOperations));
 
 // Teacher Only
-router.get('/teacher', authenticate, requireOrganizationMember, asyncHandler(AnalyticsController.getTeacherAnalytics));
+router.get('/teacher', authenticate, asyncHandler(AnalyticsController.getTeacherAnalytics));
 
 // Student Only
 router.get('/student', authenticate, asyncHandler(AnalyticsController.getStudentAnalytics));

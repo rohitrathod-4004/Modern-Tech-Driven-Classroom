@@ -18,6 +18,7 @@ import { SettingsPage } from "./features/settings/SettingsPage";
 import { AIWorkspace } from "./features/workspace/AIWorkspace";
 import { BillingPage } from "./features/billing";
 import { OrganizationPage, AcceptInvitePage } from "./features/organization";
+import { VideoLectureRoom } from "./features/video-lecture/VideoLectureRoom";
 
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -61,6 +62,7 @@ function App() {
             <Route path="/courses" element={<CourseList />} />
             <Route path="/courses/:courseId" element={<CourseDetails />} />
             <Route path="/courses/:courseId/live" element={<LiveLectureViewer />} />
+            <Route path="/video-lecture/:lectureId" element={<VideoLectureRoom />} />
             <Route path="/lectures" element={<LectureLibrary />} />
             <Route path="/record" element={<LectureTranscriber />} />
             <Route path="/courses/:courseId/lectures/:lectureId" element={<LectureViewer />} />

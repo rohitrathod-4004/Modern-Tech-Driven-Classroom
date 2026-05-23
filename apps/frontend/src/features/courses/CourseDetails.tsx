@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useCourseStore } from '../../infrastructure/stores/courseStore';
 import { useAuthStore } from '../../infrastructure/stores/authStore';
-import { Loader2, ArrowLeft, Settings, Users, Trash2, Video, Clock, CheckCircle2, Play, CircleDot } from 'lucide-react';
+import { Loader2, ArrowLeft, Settings, Users, Trash2, Video, Clock, CheckCircle2, Play, CircleDot, Radio } from 'lucide-react';
 import { api } from '../../infrastructure/api';
 import { cn } from '../../design-system/utils';
 
@@ -15,6 +15,7 @@ export function CourseDetails() {
   const [liveStatus, setLiveStatus] = useState<any>(null);
   const [lectures, setLectures] = useState<any[]>([]);
   const [isLoadingLectures, setIsLoadingLectures] = useState(true);
+  const [isStartingVideo, setIsStartingVideo] = useState(false);
 
   useEffect(() => {
     if (courseId) {
@@ -29,7 +30,7 @@ export function CourseDetails() {
   // Poll for live status
   useEffect(() => {
     if (!courseId) return;
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: any;
     
     const pollLiveStatus = async () => {
       if (document.visibilityState === 'hidden') {
@@ -117,7 +118,15 @@ export function CourseDetails() {
             </div>
           </div>
           <button 
-            onClick={() => navigate(`/courses/${courseId}/live`)}
+            onClick={() => {
+              if (liveStatus.isVideo) {
+                navigate(`/video-lecture/${liveStatus._id}`, {
+                  state: { courseId, isTeacher: false }
+                });
+              } else {
+                navigate(`/courses/${courseId}/live`);
+              }
+            }}
             className="px-4 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-md transition-colors shadow-sm"
           >
             Join Live Class
@@ -143,13 +152,39 @@ export function CourseDetails() {
           </div>
           <div className="flex gap-4">
             {isTeacher && (
-              <button
-                onClick={() => navigate('/record', { state: { courseId: activeCourse.id } })}
-                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-lg transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
-              >
-                <Video className="w-4 h-4" />
-                Start New Lecture
-              </button>
+              <>
+                <button
+                  onClick={() => navigate('/record', { state: { courseId: activeCourse.id } })}
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium text-sm rounded-lg transition-colors flex items-center gap-2 shadow-sm shadow-primary/20"
+                >
+                  <Video className="w-4 h-4" />
+                  Start New Lecture
+                </button>
+                <button
+                  disabled={isStartingVideo}
+                  onClick={async () => {
+                    try {
+                      setIsStartingVideo(true);
+                      const { data } = await api.post('/api/video/rooms', { courseId: activeCourse.id });
+                      navigate(`/video-lecture/${data.data.lectureId}`, {
+                        state: { courseId: activeCourse.id, isTeacher: true },
+                      });
+                    } catch (err: any) {
+                      alert(err?.response?.data?.message ?? 'Failed to start video lecture');
+                    } finally {
+                      setIsStartingVideo(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-60 text-white font-medium text-sm rounded-lg transition-colors flex items-center gap-2 shadow-sm shadow-purple-500/20"
+                >
+                  {isStartingVideo ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Radio className="w-4 h-4" />
+                  )}
+                  Start Video Lecture
+                </button>
+              </>
             )}
             <div className="bg-surface border border-border px-4 py-2 rounded-lg flex flex-col justify-center">
               <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-0.5">Code</span>
