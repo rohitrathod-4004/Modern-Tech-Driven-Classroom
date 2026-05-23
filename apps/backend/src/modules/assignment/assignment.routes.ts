@@ -66,6 +66,23 @@ router.delete(
   asyncHandler(AssignmentController.delete)
 );
 
+// PUT /api/assignments/:assignmentId (Teacher: Update assignment)
+router.put(
+  '/assignments/:assignmentId',
+  authenticate,
+  authorize('teacher'),
+  validate({
+    params: z.object({ assignmentId: objectIdSchema }),
+    body: z.object({
+      title: z.string().min(1, 'Title is required'),
+      description: z.string().min(1, 'Description is required'),
+      dueDate: z.string().min(1, 'Due date is required'),
+      maxSizeMb: z.string().optional().transform(v => v ? parseInt(v, 10) : 10)
+    })
+  }),
+  asyncHandler(AssignmentController.update)
+);
+
 // POST /api/assignments/:assignmentId/submissions (Student: Submit file)
 router.post(
   '/assignments/:assignmentId/submissions',

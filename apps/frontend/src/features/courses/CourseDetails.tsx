@@ -33,6 +33,11 @@ export function CourseDetails() {
   const [teacherSubmissions, setTeacherSubmissions] = useState<any[]>([]);
   const [viewingAssignmentId, setViewingAssignmentId] = useState<string | null>(null);
   const [isViewingSubmissions, setIsViewingSubmissions] = useState(false);
+  const [editingAssignmentId, setEditingAssignmentId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [editMaxSize, setEditMaxSize] = useState('10');
 
   // File upload states
   const [selectedFiles, setSelectedFiles] = useState<Record<string, File>>({});
@@ -149,6 +154,28 @@ export function CourseDetails() {
     } catch (err) {
       console.error("Failed to create assignment", err);
       alert("Failed to create assignment");
+    }
+  };
+
+  const handleUpdateAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAssignmentId) return;
+    if (!editTitle.trim() || !editDescription.trim() || !editDueDate) {
+      alert("Please fill all required fields.");
+      return;
+    }
+    try {
+      await api.put(`/api/assignments/${editingAssignmentId}`, {
+        title: editTitle,
+        description: editDescription,
+        dueDate: editDueDate,
+        maxSizeMb: editMaxSize
+      });
+      setEditingAssignmentId(null);
+      fetchAssignments();
+    } catch (err) {
+      console.error("Failed to update assignment", err);
+      alert("Failed to update assignment");
     }
   };
 
@@ -591,6 +618,52 @@ export function CourseDetails() {
                         const submission = studentSubmissions[asg._id];
                         const uploading = isUploading[asg._id];
 
+                        if (editingAssignmentId === asg._id) {
+                          return (
+                            <div key={`edit-${asg._id}`} className="bg-card/50 backdrop-blur-sm border border-border/60 rounded-xl p-5 shadow-sm space-y-4">
+                              <div className="flex items-center justify-between">
+                                <h5 className="font-bold text-base text-foreground flex items-center gap-2">
+                                  <Settings className="w-4 h-4 text-blue-500" />
+                                  Edit Assignment
+                                </h5>
+                                <button onClick={() => setEditingAssignmentId(null)} className="p-1 hover:bg-secondary/40 rounded-full text-muted-foreground transition-colors">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                              <form onSubmit={handleUpdateAssignment} className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Title *</label>
+                                    <input type="text" value={editTitle} onChange={e => setEditTitle(e.target.value)} className="w-full bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-semibold text-muted-foreground uppercase">Due Date *</label>
+                                    <input type="datetime-local" value={editDueDate} onChange={e => setEditDueDate(e.target.value)} className="w-full bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-xs font-semibold text-muted-foreground uppercase">Description *</label>
+                                  <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} rows={3} className="w-full bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary" />
+                                </div>
+                                <div className="space-y-2 max-w-xs">
+                                  <label className="text-xs font-semibold text-muted-foreground uppercase">Max Size (MB) *</label>
+                                  <select value={editMaxSize} onChange={e => setEditMaxSize(e.target.value)} className="w-full bg-background border border-border/60 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary">
+                                    <option value="2">2 MB</option>
+                                    <option value="5">5 MB</option>
+                                    <option value="10">10 MB</option>
+                                    <option value="25">25 MB</option>
+                                    <option value="50">50 MB</option>
+                                  </select>
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                  <button type="button" onClick={() => setEditingAssignmentId(null)} className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground font-semibold text-sm rounded-lg transition-all border border-border/40">Cancel</button>
+                                  <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition-all">Save Changes</button>
+                                </div>
+                              </form>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div key={asg._id} className="bg-card/50 backdrop-blur-sm border border-border/60 rounded-xl p-5 shadow-sm space-y-4 flex flex-col md:flex-row md:items-start justify-between gap-6 hover:border-border transition-all">
                             <div className="flex-1 space-y-2">
@@ -623,6 +696,19 @@ export function CourseDetails() {
                                   >
                                     <FileText className="w-3.5 h-3.5" />
                                     View Submissions
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setEditingAssignmentId(asg._id);
+                                      setEditTitle(asg.title);
+                                      setEditDescription(asg.description);
+                                      setEditDueDate(new Date(asg.dueDate).toISOString().slice(0, 16));
+                                      setEditMaxSize(asg.maxSizeMb?.toString() || '10');
+                                    }}
+                                    className="w-full px-3 py-2 border border-blue-500/20 bg-blue-500/5 text-blue-500 hover:bg-blue-500/15 font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-2"
+                                  >
+                                    <Settings className="w-3.5 h-3.5" />
+                                    Edit Assignment
                                   </button>
                                   <button
                                     onClick={() => handleDeleteAssignment(asg._id)}

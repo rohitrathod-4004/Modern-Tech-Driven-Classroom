@@ -19,6 +19,23 @@ export class AssignmentController {
     res.status(201).json({ data: assignment });
   }
 
+  static async update(req: Request, res: Response) {
+    const { assignmentId } = req.params;
+    const { title, description, dueDate, maxSizeMb } = req.body;
+    const teacherId = req.user!.id;
+
+    const assignment = await AssignmentService.updateAssignment(
+      assignmentId,
+      teacherId,
+      title,
+      description,
+      new Date(dueDate),
+      maxSizeMb ? parseInt(maxSizeMb, 10) : 10
+    );
+
+    res.status(200).json({ data: assignment });
+  }
+
   static async list(req: Request, res: Response) {
     const { courseId } = req.params;
     const userId = req.user!.id;

@@ -59,6 +59,28 @@ export class AssignmentService {
     return assignments;
   }
 
+  static async updateAssignment(
+    assignmentId: string,
+    teacherId: string,
+    title: string,
+    description: string,
+    dueDate: Date,
+    maxSizeMb: number
+  ) {
+    const assignment = await Assignment.findOne({ _id: assignmentId, teacherId, deletedAt: null });
+    if (!assignment) {
+      throw new AppError('Assignment not found or unauthorized', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    assignment.title = title;
+    assignment.description = description;
+    assignment.dueDate = dueDate;
+    assignment.maxSizeMb = maxSizeMb;
+
+    await assignment.save();
+    return assignment;
+  }
+
   static async deleteAssignment(assignmentId: string, teacherId: string) {
     const assignment = await Assignment.findOne({ _id: assignmentId, teacherId, deletedAt: null });
     if (!assignment) {
