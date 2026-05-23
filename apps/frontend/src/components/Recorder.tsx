@@ -174,15 +174,20 @@ export const Recorder: React.FC<RecorderProps> = ({
       // Deferred Lecture Creation
       let currentLectureId = lectureId;
       if (!currentLectureId) {
-        // Need to import api at the top if not already, or fetch
-        // Let's assume we can use fetch or api from infrastructure
-        const { api } = await import('../infrastructure/api');
-        const { data } = await api.post(`/api/courses/${courseId}/lectures`, {
-          title: `Live Lecture - ${new Date().toLocaleDateString()}`
-        });
-        currentLectureId = data.data._id;
-        setLectureId(currentLectureId);
-        activeLectureIdRef.current = currentLectureId;
+        try {
+          const { api } = await import('../infrastructure/api');
+          const { data } = await api.post(`/api/courses/${courseId}/lectures`, {
+            title: `Live Lecture - ${new Date().toLocaleDateString()}`
+          });
+          currentLectureId = data.data._id;
+          setLectureId(currentLectureId);
+          activeLectureIdRef.current = currentLectureId;
+        } catch (err: any) {
+          const msg = err.response?.data?.message || 'Failed to initialize lecture. Check AI credits.';
+          setError(msg);
+          alert(msg);
+          return; // Stop recording initialization
+        }
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });

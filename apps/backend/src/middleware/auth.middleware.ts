@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { AppError } from '../utils/AppError';
-import { UserRole, ErrorCodes } from '@classroom/shared';
-import { User } from '../models/User';
+import { UserRole, ErrorCodes, AccountType } from '@classroom/shared';
+import { User, IUserDocument } from '../models/User';
 
 declare global {
   namespace Express {
@@ -12,6 +12,9 @@ declare global {
         id: string;
         email: string;
         role: UserRole;
+        accountType?: AccountType;
+        organizationId?: string;
+        walletId?: string;
       };
     }
   }
@@ -35,8 +38,8 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   try {
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
     
-    // Enforce tokenVersion for session invalidation
-    const user = await User.findById(decoded.sub).select('tokenVersion');
+    // Enforce tokenVersion for session invalidation and fetch tenant details
+    const user = await User.findById(decoded.sub).select('tokenVersion accountType organizationId walletId role');
     if (!user || user.tokenVersion !== decoded.tokenVersion) {
       return next(new AppError('Session invalidated', 401, ErrorCodes.TOKEN_REVOKED));
     }
@@ -45,7 +48,10 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     req.user = {
       id: decoded.sub,
       email: decoded.email,
-      role: decoded.role
+      role: user.role || decoded.role, // Use DB role for latest precision
+      accountType: user.accountType,
+      organizationId: user.organizationId?.toString(),
+      walletId: user.walletId?.toString()
     };
     
     next();

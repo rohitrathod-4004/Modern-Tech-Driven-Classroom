@@ -82,7 +82,7 @@ export const AIWorkspace: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 space-y-8 p-8 pt-6 relative overflow-hidden bg-background h-full flex flex-col">
+    <div className="flex-1 space-y-8 p-8 pt-6 relative overflow-x-hidden overflow-y-auto bg-background h-full flex flex-col">
       {/* Atmospheric Background */}
       <div className="absolute top-0 right-1/4 w-[600px] h-[600px] bg-purple-500/5 rounded-full blur-[150px] pointer-events-none"></div>
       

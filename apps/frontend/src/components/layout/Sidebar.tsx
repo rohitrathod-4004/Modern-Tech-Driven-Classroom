@@ -1,16 +1,35 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Video, BrainCircuit, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, BookOpen, BrainCircuit, Settings, LogOut, CreditCard, Building } from 'lucide-react';
 import { cn } from '../../design-system/utils';
 import { useAuthStore } from '../../infrastructure/stores/authStore';
 
 export function Sidebar() {
+  const user = useAuthStore((state: any) => state.user);
   const logout = useAuthStore((state: any) => state.logout);
 
-  const navigation = [
-    { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
-    { name: 'Courses', to: '/courses', icon: BookOpen },
-    { name: 'AI Workspace', to: '/workspace', icon: BrainCircuit },
-  ];
+  let navigation = [];
+
+  if (user?.role === 'org_admin') {
+    navigation = [
+      { name: 'Organization Dashboard', to: '/dashboard', icon: LayoutDashboard },
+      { name: 'Teacher Management', to: '/organization', icon: Building },
+      { name: 'Billing', to: '/billing', icon: CreditCard },
+    ];
+  } else if (user?.role === 'teacher') {
+    navigation = [
+      { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+      { name: 'My Courses', to: '/courses', icon: BookOpen },
+      { name: 'AI Workspace', to: '/workspace', icon: BrainCircuit },
+      { name: 'Billing', to: '/billing', icon: CreditCard },
+      { name: 'Organization', to: '/organization', icon: Building },
+    ];
+  } else {
+    navigation = [
+      { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
+      { name: 'My Courses', to: '/courses', icon: BookOpen },
+      { name: 'AI Workspace', to: '/workspace', icon: BrainCircuit },
+    ];
+  }
 
   return (
     <div className="flex h-full w-60 flex-col border-r border-border/40 bg-background">

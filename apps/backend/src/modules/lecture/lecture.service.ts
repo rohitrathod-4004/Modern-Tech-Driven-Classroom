@@ -4,6 +4,8 @@ import { TranscriptChunk } from '../../models/TranscriptChunk';
 import { AppError } from '../../utils/AppError';
 import { ErrorCodes, PaginatedTimelineResponse, TranscriptTimelineNode } from '@classroom/shared';
 import { enqueueLectureProcessing } from '../../infrastructure/queue/jobs/lectureProcessing.job';
+import { User } from '../../models/User';
+import { WalletService } from '../wallet/wallet.service';
 import { concatenateAudioChunks } from '../../utils/ffmpeg';
 import path from 'path';
 import fs from 'fs';
@@ -17,6 +19,17 @@ export class LectureService {
     const course = await Course.findOne({ _id: courseId, teacherId, deletedAt: null }).lean();
     if (!course) {
       throw new AppError('Course not found or unauthorized', 404, ErrorCodes.NOT_FOUND);
+    }
+
+    // Pre-Lecture Credit Enforcement
+    const teacher = await User.findById(teacherId).select('walletId').lean();
+    if (!teacher || !teacher.walletId) {
+      throw new AppError('Wallet not found. Please contact support.', 400);
+    }
+
+    const hasEnoughCredits = await WalletService.checkMinimumBalance(teacher.walletId.toString(), 5);
+    if (!hasEnoughCredits) {
+      throw new AppError('Insufficient AI credits to start a lecture.', 402);
     }
 
     const lecture = await Lecture.create({
@@ -87,8 +100,24 @@ export class LectureService {
       throw new AppError(`Cannot end lecture from state: ${lecture.status}`, 400, 'INVALID_STATE_TRANSITION');
     }
 
+    const teacher = await User.findById(teacherId).select('walletId organizationId').lean();
+    if (!teacher || !teacher.walletId) {
+      throw new AppError('Wallet not found for teacher', 400);
+    }
+
     const now = new Date();
     const durationSeconds = Math.max(0, Math.floor((now.getTime() - lecture.startedAt.getTime()) / 1000));
+    
+    // Deduct Credits: 1 credit per minute (minimum 1 credit)
+    const creditsToDeduct = Math.max(1, Math.ceil(durationSeconds / 60));
+    await WalletService.deductLectureCredits(
+      teacher.walletId.toString(),
+      creditsToDeduct,
+      durationSeconds,
+      lecture._id.toString(),
+      teacherId,
+      teacher.organizationId?.toString()
+    );
 
     lecture.status = 'ai_processing';
     lecture.endedAt = now;

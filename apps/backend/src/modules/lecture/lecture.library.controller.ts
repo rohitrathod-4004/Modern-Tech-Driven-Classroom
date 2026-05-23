@@ -58,7 +58,9 @@ export class LectureLibraryController {
       status: lec.status,
       startedAt: lec.startedAt,
       durationSeconds: lec.durationSeconds,
-      summary: lec.summary?.short
+      summary: lec.summary?.short,
+      createdAt: lec.createdAt,
+      aiStatus: lec.aiStatus
     }));
 
     res.status(200).json({

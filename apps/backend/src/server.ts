@@ -14,11 +14,15 @@ import { apiRateLimiter } from "./middleware/rateLimit.middleware";
 import uploadRouter from "./routes/upload";
 import transcriptRouter from "./routes/transcript";
 import authRouter from "./modules/auth/auth.routes";
+
 import lectureRouter from "./modules/lecture/lecture.routes";
 import courseRouter from "./modules/course/course.routes";
 import dashboardRouter from "./modules/dashboard/dashboard.routes";
 import searchRouter from "./modules/search/search.routes";
 import adminRouter from "./modules/admin/admin.routes";
+import organizationRouter from "./modules/organization/organization.routes";
+import billingRouter from "./modules/billing/billing.routes";
+import analyticsRouter from "./modules/analytics/analytics.routes";
 import { globalErrorHandler } from "./middleware/error.middleware";
 import { startLectureWorker } from "./infrastructure/queue/lecture.worker";
 import { recoverStrandedAIJobs } from "./infrastructure/queue/queue.recovery";
@@ -91,6 +95,9 @@ app.use("/api/admin", adminRouter);
 app.use("/api/courses", courseRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/search", searchRouter);
+app.use("/api/organizations", organizationRouter);
+app.use("/api/billing", billingRouter);
+app.use("/api/analytics", analyticsRouter);
 app.use("/api", lectureRouter);
 
 // Legacy/Existing Routes (Preserved for backwards compatibility)
