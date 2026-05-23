@@ -1,0 +1,13 @@
+{
+    "name": "attack-tools",
+    "version": "1.0.0",
+    "description": "Security attack demonstration scripts for educational purposes",
+    "scripts": {
+        "ice-injection": "node ice-injection-attack.js",
+        "dos-flood": "node dos-flood-attack.js",
+        "session-hijack": "node session-hijack-attack.js"
+    },
+    "dependencies": {
+        "socket.io-client": "^4.5.0"
+    }
+}

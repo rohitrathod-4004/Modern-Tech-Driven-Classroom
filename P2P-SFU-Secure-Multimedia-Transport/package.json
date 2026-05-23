@@ -1,0 +1,21 @@
+{
+    "name": "p2p-sfu-secure-transport",
+    "version": "1.0.0",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "dev": "npm run dev --workspaces --if-present",
+        "build": "npm run build --workspaces --if-present",
+        "lint": "npm run lint --workspaces --if-present"
+    },
+    "devDependencies": {
+        "@types/glob": "^9.0.0",
+        "eslint": "^8.0.0",
+        "prettier": "^3.0.0",
+        "turbo": "latest",
+        "typescript": "^5.0.0"
+    }
+}

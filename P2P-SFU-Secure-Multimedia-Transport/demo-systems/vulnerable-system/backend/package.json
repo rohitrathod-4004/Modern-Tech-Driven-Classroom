@@ -1,0 +1,15 @@
+{
+    "name": "vulnerable-backend",
+    "version": "1.0.0",
+    "description": "Vulnerable video calling backend - NO SECURITY (for demonstration only)",
+    "main": "server.js",
+    "scripts": {
+        "dev": "node server.js",
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "socket.io": "^4.5.4",
+        "cors": "^2.8.5"
+    }
+}

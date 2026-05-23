@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-hacker-bg text-white;
+        font-family: 'Fira Code', 'Courier New', monospace;
+    }
+}
+
+@layer components {
+    .attack-btn {
+        @apply px-6 py-3 rounded-lg font-bold transition-all duration-300;
+        @apply hover:scale-105 hover:shadow-lg;
+    }
+
+    .attack-btn-primary {
+        @apply bg-danger-red hover:bg-red-600 text-white;
+    }
+
+    .status-box {
+        @apply bg-hacker-secondary p-6 rounded-lg border border-gray-700;
+    }
+
+    .log-entry {
+        @apply font-mono text-sm py-1 border-b border-gray-800;
+    }
+}

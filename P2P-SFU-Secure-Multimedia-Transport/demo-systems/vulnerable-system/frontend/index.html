@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vulnerable Video Call - DEMO ONLY</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚠️ VULNERABLE VIDEO CALL SYSTEM</h1>
+            <p class="warning">NO SECURITY - DEMONSTRATION ONLY</p>
+        </div>
+
+        <!-- Attack Warning Banner -->
+        <div id="attackWarning" class="attack-warning hidden">
+            <div class="attack-icon">🚨</div>
+            <div class="attack-text">
+                <strong>UNDER ATTACK!</strong>
+                <span id="attackType"></span>
+            </div>
+        </div>
+
+        <!-- Performance Monitor -->
+        <div class="performance-monitor">
+            <div class="perf-item">
+                <span class="perf-label">FPS:</span>
+                <span id="fpsCounter" class="perf-value">60</span>
+            </div>
+            <div class="perf-item">
+                <span class="perf-label">Connections:</span>
+                <span id="connectionCount" class="perf-value">0</span>
+            </div>
+            <div class="perf-item">
+                <span class="perf-label">Quality:</span>
+                <span id="qualityIndicator" class="perf-value quality-good">GOOD</span>
+            </div>
+        </div>
+
+        <div class="room-info">
+            <label>Room ID:</label>
+            <input type="text" id="roomId" value="demo-room" />
+            <button id="joinBtn">Join Room</button>
+        </div>
+
+        <div class="video-grid">
+            <div class="video-container">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div class="video-label">You (Local)</div>
+                <canvas id="fpsCanvas" class="fps-overlay"></canvas>
+            </div>
+            <div class="video-container">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <div class="video-label">Remote User</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="muteBtn" class="control-btn">🎤 Mute</button>
+            <button id="videoBtn" class="control-btn">📹 Video Off</button>
+            <button id="leaveBtn" class="control-btn danger">📞 Leave</button>
+        </div>
+
+        <div class="status">
+            <h3>Connection Status & Attack Logs</h3>
+            <div id="statusLog"></div>
+        </div>
+
+        <div class="security-warning">
+            <h3>⚠️ Missing Security Features:</h3>
+            <ul>
+                <li>❌ No encryption (plain RTP)</li>
+                <li>❌ No token validation</li>
+                <li>❌ No ICE candidate validation</li>
+                <li>❌ No rate limiting</li>
+                <li>❌ No input sanitization</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-peer@9.11.1/simplepeer.min.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
