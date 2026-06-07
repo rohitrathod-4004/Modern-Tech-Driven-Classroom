@@ -1,20 +1,26 @@
-# AI Classroom Platform
+# Modern Tech-Driven Classroom (AI Classroom Platform)
 
-A real-time, offline-first web application designed to transform lecture recordings into interactive, AI-powered study materials. This platform utilizes the Google Gemini Flash model to automatically structure long-form video/audio into semantic chapters, quizzes, 3D flashcards, and comprehensive study notes.
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
+![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=for-the-badge&logo=redis&logoColor=white)
+![WebRTC](https://img.shields.io/badge/WebRTC-333333?style=for-the-badge&logo=webrtc&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=google&logoColor=white)
 
-## 🌟 Features
-- **Offline-First Recording:** Transcribe audio in the browser via Web Worker (Whisper) without waiting for server uploads.
-- **Smart Virtuoso Timeline:** 60fps virtualization for thousands of transcript chunks, auto-syncing with media playback.
-- **Semantic Chapters:** AI automatically chunks the lecture into distinct timeline topics.
-- **Study Workspace:**
-  - Auto-generated Multiple Choice Quizzes.
-  - Interactive 3D Flashcards with keyboard navigation.
-  - Summaries and Topic highlights.
-- **Teacher Analytics:** View student engagement and AI processing throughput directly from the dashboard.
+A comprehensive, real-time, offline-first web application designed to transform online education. This platform provides hybrid virtual classrooms and utilizes the Google Gemini Flash model to automatically structure long-form video/audio into semantic chapters, quizzes, 3D flashcards, and comprehensive study notes.
+
+## 🌟 Key Features
+
+- **Cinematic Role-Based Dashboards:** Premium dark-mode glassmorphism interface with tailored experiences for Students, Teachers, and Organizations.
+- **Hybrid Real-Time Video Conferencing (Online Live Lectures):** Scalable virtual classroom featuring **seamless transition between P2P and SFU topologies** based on participant count/QoS. Utilizes STUN/TURN servers (e.g., Twilio) for robust NAT traversal and includes live transcription polling for real-time closed captions.
+- **AI-Powered Study Workspace:** Automatic generation of Semantic Chapters, Multiple Choice Quizzes, and Interactive 3D Flashcards (via Gemini API).
+- **Instant Audio Transcription:** In-browser transcription via Web Worker (Local Whisper) ensures transcripts are generated instantly during live lectures without waiting for server uploads.
+- **Organization & Billing Management:** Multi-tenant architecture allowing Organizations to invite teachers, allocate credits, and manage subscriptions with Razorpay integration.
+- **Smart Virtuoso Timeline:** 60fps virtualization for rendering thousands of transcript chunks seamlessly, auto-syncing with media playback.
 
 ## 📸 Screenshots
 
-| Dashboard | Lecture Viewer & Smart Timeline |
+| Cinematic Dashboard | Lecture Viewer & Smart Timeline |
 |-----------|--------------------------------|
 | ![Dashboard Placeholder](docs/screenshots/dashboard.png) | ![Lecture Viewer Placeholder](docs/screenshots/lecture_viewer.png) |
 
@@ -24,98 +30,97 @@ A real-time, offline-first web application designed to transform lecture recordi
 
 ## 🏗 Architecture & Tech Stack
 
-### Tech Stack
-- **Frontend:** React, Vite, Zustand, Tailwind CSS, React Virtuoso
-- **Backend:** Node.js, Express, MongoDB (Mongoose), BullMQ
-- **AI/ML:** Google Gemini 1.5 Flash, Transformers.js (Local Whisper)
-- **Queue/Cache:** Redis
+### Technology Stack
+- **Frontend Workspace:** React 19, Vite, Zustand, Tailwind CSS, React Virtuoso, Simple-Peer (WebRTC), Socket.io-client
+- **Backend Workspace:** Node.js, Express, MongoDB (Mongoose), Socket.io, BullMQ, Razorpay, Puppeteer
+- **AI/ML Layer:** Google Gemini 1.5 Flash, Transformers.js (Local Whisper)
+- **Infrastructure:** Redis (Job Queues & Caching)
+- **Shared Architecture:** Monorepo using npm workspaces (`@classroom/shared` types and utilities).
 
 ### Why This Architecture?
-The platform follows an **Async AI worker pattern**. By offloading all expensive LLM operations (Embeddings, Summaries, Quizzes) to a BullMQ worker via Redis, the primary Node.js thread remains unblocked, ensuring zero dropped frames when teachers upload chunked audio. 
-Virtuoso was selected on the frontend to prevent DOM bloat; rendering thousands of transcript nodes would otherwise crush browser memory. Zustand strictly manages the state locally without cascading Context updates.
+The platform utilizes an **Async AI worker pattern**. By offloading all expensive LLM operations (Embeddings, Summaries, Quizzes) to a BullMQ worker via Redis, the primary Node.js thread remains unblocked. This ensures zero dropped frames when teachers upload chunked audio or when managing real-time WebSocket connections for the virtual classroom.
 
-## 📸 System Diagrams
+**Hybrid WebRTC Topology:** The virtual classroom dynamically scales. It starts in a lightweight **Peer-to-Peer (P2P)** mesh mode for small groups to reduce server load. As participant count increases, it seamlessly transitions to a **Selective Forwarding Unit (SFU)** mode to preserve client bandwidth and maintain high Quality of Service (QoS). Connection reliability is guaranteed via STUN/TURN server integration (e.g., Twilio) for robust NAT traversal.
 
-### Recording & Processing Lifecycle
-```mermaid
-sequenceDiagram
-    participant Teacher
-    participant Frontend
-    participant Backend
-    participant Worker (BullMQ)
-    participant Gemini
+On the frontend, **React Virtuoso** prevents DOM bloat; rendering thousands of transcript nodes would otherwise crash browser memory. **Zustand** strictly manages the state locally without cascading Context updates.
 
-    Teacher->>Frontend: Start Recording
-    Frontend->>Frontend: Whisper WebWorker (Local Transcript)
-    Frontend->>Backend: Sync Chunks (IndexedDB queue)
-    Backend->>MongoDB: Save TranscriptChunk
-    Teacher->>Frontend: Stop Recording
-    Frontend->>Backend: Finalize Lecture
-    Backend->>Redis: Enqueue AI Job
-    Worker->>Redis: Consume AI Job
-    Worker->>Gemini: Request Summary & Topics
-    Gemini-->>Worker: JSON Response
-    Worker->>Gemini: Request Quiz & Flashcards
-    Gemini-->>Worker: JSON Response
-    Worker->>MongoDB: Save generated study materials
+## 🗂 Project Structure
+
+```text
+├── apps/
+│   ├── frontend/         # React SPA (Vite)
+│   └── backend/          # Express API & WebSocket Server
+├── shared/               # Shared TypeScript types & interfaces
+├── python-services/      # Auxiliary Python microservices (e.g., Whisper)
+└── docs/                 # Documentation & Assets
 ```
 
 ## 🚀 Setup & Localhost Development
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB running locally (default: `mongodb://localhost:27017/ai_classroom`)
-- Redis running locally (default: `127.0.0.1:6379`)
-- Google Gemini API Key
+- **Node.js** (v18+)
+- **MongoDB** running locally (default: `mongodb://localhost:27017/ai_classroom`)
+- **Redis** running locally (default: `127.0.0.1:6379`)
+- **Google Gemini API Key**
+- **Razorpay API Keys** (Optional, required for billing flows)
 
 ### Installation
 
-1. **Install Dependencies**
+1. **Install Dependencies** (from the repository root)
    ```bash
    npm install
    ```
 
 2. **Environment Configuration**
-   Copy `.env.example` to `apps/backend/.env`:
-   ```bash
+   
+   **Backend:** Copy `apps/backend/.env.example` to `apps/backend/.env`
+   ```env
    PORT=4000
    NODE_ENV=development
    MONGODB_URI=mongodb://localhost:27017/ai_classroom
    REDIS_HOST=127.0.0.1
    REDIS_PORT=6379
-   JWT_SECRET=local_development_secret_key
-   GEMINI_API_KEY=your_key_here
+   JWT_SECRET=local_development_secret_key_change_in_prod
+   GEMINI_API_KEY=your_gemini_api_key_here
+   AI_WORKER_CONCURRENCY=2
+   RAZORPAY_KEY_ID=your_key_id
+   RAZORPAY_KEY_SECRET=your_key_secret
+   ```
+
+   **Frontend:** Copy `apps/frontend/.env.example` to `apps/frontend/.env`
+   ```env
+   VITE_API_URL=http://localhost:4000
    ```
 
 3. **Seed Database (Demo Mode)**
-   This will instantly generate a highly realistic "Consensus Algorithms" lecture containing AI summaries and quizzes without consuming your Gemini quotas.
+   This generates sample realistic data including users, organizations, and an AI-processed lecture.
    ```bash
    npm run seed
    # For a clean slate: npm run seed:reset
    ```
 
 4. **Run Platform**
-   Using `concurrently`, spin up the frontend and backend simultaneously:
+   Using `concurrently` at the root level, spin up the frontend and backend simultaneously:
    ```bash
    npm run dev
    ```
 
 ## 🎓 Demo Flow
 
-1. Go to `http://localhost:5173`
-2. **Log in** as `student@demo.com` (password: `password123`)
-3. **Open** "Introduction to Distributed Systems"
-4. **Click** the "Understanding Consensus: Paxos and Raft" lecture.
-5. **Explore** the Smart Timeline on the left. Click transcript chunks to "seek" the media.
-6. **Toggle** "Study Mode" in the top right to collapse the timeline.
-7. **Interact** with the generated 3D Flashcards and Quiz on the right-hand panel.
+1. Open `http://localhost:5173`
+2. **Log in** based on role (e.g., student, teacher, or org admin using seeded credentials).
+3. **Explore Dashboard:** Observe the dynamic cinematic UI with live activity metrics.
+4. **Enter a Video Lecture Room:** Test the WebRTC implementation for virtual classrooms.
+5. **View Recorded Lectures:** Explore the Smart Timeline on the left. Click transcript chunks to "seek" the media.
+6. **Study Mode:** Interact with the generated 3D Flashcards and Multiple Choice Quizzes on the right-hand panel.
 
 ## ⚠️ Known Limitations
-- VAD (Voice Activity Detection) in the browser can occasionally split sentences awkwardly if the speaker pauses for exactly 2 seconds.
+- Voice Activity Detection (VAD) in the browser can occasionally split sentences awkwardly if the speaker pauses for exactly 2 seconds.
 - The platform relies entirely on `ffmpeg-static` for backend processing; extremely large files might encounter Node.js memory limits.
-- Currently, no centralized logging service (e.g. Datadog) is integrated.
+- The WebRTC P2P mesh network (`simple-peer`) is ideal for smaller classrooms (up to 4-5 participants). For larger scale, an SFU transition (like mediasoup or LiveKit) is recommended.
 
 ## 🛣 Future Roadmap
 - **Deployment:** Containerize via Docker and deploy on AWS ECS or Render.
+- **SFU Integration:** Migrate from purely P2P to a hybrid SFU architecture for large virtual classrooms.
 - **Multi-modal AI:** Pass actual video frames to Gemini 1.5 Pro to index visual slide content alongside the audio.
-- **RAG Assistant:** Enable the Q/A chatbox using vector embeddings (Pinecone/Qdrant).
+- **RAG Assistant:** Enable a Q/A chatbox using vector embeddings (Pinecone/Qdrant).
