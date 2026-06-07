@@ -29,6 +29,9 @@ export class AuthController {
           email: user.email,
           name: user.name,
           role: user.role,
+          accountType: user.accountType,
+          organizationId: user.organizationId?.toString(),
+          walletId: user.walletId?.toString(),
           enrolledCourses: user.enrolledCourses,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt
@@ -54,6 +57,9 @@ export class AuthController {
           email: user.email,
           name: user.name,
           role: user.role,
+          accountType: user.accountType,
+          organizationId: user.organizationId?.toString(),
+          walletId: user.walletId?.toString(),
           enrolledCourses: user.enrolledCourses,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt
@@ -114,6 +120,9 @@ export class AuthController {
           email: user.email,
           name: user.name,
           role: user.role,
+          accountType: user.accountType,
+          organizationId: user.organizationId?.toString(),
+          walletId: user.walletId?.toString(),
           enrolledCourses: user.enrolledCourses,
           createdAt: user.createdAt,
           updatedAt: user.updatedAt

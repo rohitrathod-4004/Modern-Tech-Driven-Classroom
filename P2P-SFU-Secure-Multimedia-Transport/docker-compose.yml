@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    command: --config /etc/livekit.yaml
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --save 60 1 --loglevel warning
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+#  # Optional: Ingress for local testing if needed, but host mode is usually fine for dev
+#  ingress:
+#    image: livekit/ingress:latest
+#    environment:
+#      - INGRESS_CONFIG_FILE=/etc/ingress.yaml
+#    volumes:
+#      - ./ingress.yaml:/etc/ingress.yaml

@@ -14,11 +14,17 @@ import { apiRateLimiter } from "./middleware/rateLimit.middleware";
 import uploadRouter from "./routes/upload";
 import transcriptRouter from "./routes/transcript";
 import authRouter from "./modules/auth/auth.routes";
+
 import lectureRouter from "./modules/lecture/lecture.routes";
 import courseRouter from "./modules/course/course.routes";
 import dashboardRouter from "./modules/dashboard/dashboard.routes";
 import searchRouter from "./modules/search/search.routes";
 import adminRouter from "./modules/admin/admin.routes";
+import organizationRouter from "./modules/organization/organization.routes";
+import billingRouter from "./modules/billing/billing.routes";
+import analyticsRouter from "./modules/analytics/analytics.routes";
+import videoRouter from "./modules/video/video.routes";
+import assignmentRouter from "./modules/assignment/assignment.routes";
 import { globalErrorHandler } from "./middleware/error.middleware";
 import { startLectureWorker } from "./infrastructure/queue/lecture.worker";
 import { recoverStrandedAIJobs } from "./infrastructure/queue/queue.recovery";
@@ -73,6 +79,13 @@ app.get("/health", async (_req, res) => {
 // Serve stored lecture audio files
 app.use('/uploads/lectures', express.static(LECTURES_UPLOAD_DIR));
 
+// Serve stored assignment submission files
+const ASSIGNMENTS_UPLOAD_DIR = path.join(__dirname, '../uploads/assignments');
+if (!fs.existsSync(ASSIGNMENTS_UPLOAD_DIR)) {
+  fs.mkdirSync(ASSIGNMENTS_UPLOAD_DIR, { recursive: true });
+}
+app.use('/uploads/assignments', express.static(ASSIGNMENTS_UPLOAD_DIR));
+
 // Convenience endpoint: GET /api/audio/:lectureId
 // Redirects to the static file if audio has been assembled, 404 otherwise
 app.get('/api/audio/:lectureId', (req, res) => {
@@ -91,7 +104,12 @@ app.use("/api/admin", adminRouter);
 app.use("/api/courses", courseRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/search", searchRouter);
+app.use("/api/organizations", organizationRouter);
+app.use("/api/billing", billingRouter);
+app.use("/api/analytics", analyticsRouter);
+app.use("/api/video", videoRouter);
 app.use("/api", lectureRouter);
+app.use("/api", assignmentRouter);
 
 // Legacy/Existing Routes (Preserved for backwards compatibility)
 app.use("/", uploadRouter);
@@ -112,3 +130,5 @@ connectDB().then(async () => {
 });
 
 export default app;
+// Trigger nodemon restart after releasing port 3000
+

@@ -106,7 +106,7 @@ export const LectureViewer: React.FC = () => {
   return (
     <Layout
       header={<LectureHeader lecture={lecture} />}
-      media={<MediaContainer audioUrl={`/api/audio/${lectureId}`} />}
+      media={<MediaContainer audioUrl={`${api.defaults.baseURL}/api/audio/${lectureId}`} />}
       sidebar={<LectureSidebar />}
       timeline={<TimelineContainer courseId={courseId} lectureId={lectureId} virtuosoRef={virtuosoRef} />}
     />

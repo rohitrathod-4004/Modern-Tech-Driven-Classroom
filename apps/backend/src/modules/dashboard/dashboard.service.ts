@@ -1,5 +1,7 @@
 import { Course } from '../../models/Course';
 import { Lecture } from '../../models/Lecture';
+import { Assignment } from '../../models/Assignment';
+import { Submission } from '../../models/Submission';
 import { DashboardStatsDto } from '@classroom/shared';
 import mongoose from 'mongoose';
 
@@ -63,13 +65,23 @@ export class DashboardService {
     // Total Study Materials for student
     const totalStudyMaterials = aiProcessingReady * 10;
 
+    // Calculate assignments stats
+    const assignmentsCount = await Assignment.countDocuments({ courseId: { $in: courseIds }, deletedAt: null });
+    const assignmentIds = await Assignment.find({ courseId: { $in: courseIds }, deletedAt: null }).distinct('_id');
+    const submissionsCount = await Submission.countDocuments({
+      studentId: new mongoose.Types.ObjectId(studentId),
+      assignmentId: { $in: assignmentIds }
+    });
+
     return {
       totalCourses: courses.length,
       totalLectures: lectures.length,
       totalHoursRecorded,
       totalStudyMaterials,
-      aiProcessingReady
-    };
+      aiProcessingReady,
+      assignmentsCount,
+      submissionsCount
+    } as any;
   }
 
   static async getRecentLectures(userId: string, role: string, limit: number = 3) {

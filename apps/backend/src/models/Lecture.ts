@@ -9,6 +9,7 @@ export interface ILectureDocument extends Document {
   startedAt: Date;
   endedAt?: Date;
   isLive?: boolean;
+  isVideo?: boolean;
   liveStartedAt?: Date;
   liveEndedAt?: Date;
   durationSeconds?: number;
@@ -69,6 +70,7 @@ const LectureSchema = new Schema<ILectureDocument>({
   startedAt: { type: Date, default: Date.now },
   endedAt: { type: Date },
   isLive: { type: Boolean, default: false },
+  isVideo: { type: Boolean, default: false },
   liveStartedAt: { type: Date },
   liveEndedAt: { type: Date },
   durationSeconds: { type: Number },

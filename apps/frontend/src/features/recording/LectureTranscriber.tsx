@@ -89,7 +89,6 @@ export function LectureTranscriber() {
           courseId={courseId} 
           chunksProcessed={chunks.length}
           onNewChunk={handleNewChunk} 
-          onResetSession={() => navigate('/dashboard')} 
         />
         
         <div className="bg-card/50 backdrop-blur-sm border border-border/40 rounded-2xl shadow-xl flex-1 overflow-hidden p-6 min-h-[400px]">

@@ -88,6 +88,20 @@ router.get(
   asyncHandler(LectureController.get)
 );
 
+// DELETE /api/courses/:courseId/lectures/:lectureId
+router.delete(
+  '/courses/:courseId/lectures/:lectureId',
+  authenticate,
+  authorize('teacher'),
+  validate({
+    params: z.object({
+      courseId: objectIdSchemaLocal,
+      lectureId: objectIdSchemaLocal
+    })
+  }),
+  asyncHandler(LectureController.delete)
+);
+
 // GET /api/courses/:courseId/lectures/:lectureId/timeline
 router.get(
   '/courses/:courseId/lectures/:lectureId/timeline',

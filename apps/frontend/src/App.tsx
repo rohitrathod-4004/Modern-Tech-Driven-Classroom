@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./features/auth/Login";
 import { Register } from "./features/auth/Register";
-import { Dashboard } from "./features/dashboard/Dashboard";
+import { RoleBasedDashboard } from "./features/dashboard/RoleBasedDashboard";
 import { LectureTranscriber } from "./features/recording/LectureTranscriber";
 import { LectureViewer } from "./features/lecture/LectureViewer";
 import { LiveLectureViewer } from "./features/lecture/LiveLectureViewer";
@@ -16,6 +16,9 @@ import { useAuthStore } from "./infrastructure/stores/authStore";
 import { api } from "./infrastructure/api";
 import { SettingsPage } from "./features/settings/SettingsPage";
 import { AIWorkspace } from "./features/workspace/AIWorkspace";
+import { BillingPage } from "./features/billing";
+import { OrganizationPage, AcceptInvitePage } from "./features/organization";
+import { VideoLectureRoom } from "./features/video-lecture/VideoLectureRoom";
 
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
@@ -55,14 +58,18 @@ function App() {
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard" element={<RoleBasedDashboard />} />
             <Route path="/courses" element={<CourseList />} />
             <Route path="/courses/:courseId" element={<CourseDetails />} />
             <Route path="/courses/:courseId/live" element={<LiveLectureViewer />} />
+            <Route path="/video-lecture/:lectureId" element={<VideoLectureRoom />} />
             <Route path="/lectures" element={<LectureLibrary />} />
             <Route path="/record" element={<LectureTranscriber />} />
             <Route path="/courses/:courseId/lectures/:lectureId" element={<LectureViewer />} />
             <Route path="/workspace" element={<AIWorkspace />} />
+            <Route path="/organization" element={<OrganizationPage />} />
+            <Route path="/invite" element={<AcceptInvitePage />} />
+            <Route path="/billing" element={<BillingPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>

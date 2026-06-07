@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCourseStore } from '../../infrastructure/stores/courseStore';
 import { useTimelineStore } from '../../infrastructure/stores/timelineStore';
@@ -21,7 +21,7 @@ export function LiveLectureViewer() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [duration, setDuration] = useState<number>(0);
   const [initialLoading, setInitialLoading] = useState<boolean>(true);
-  const pollingRetryRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingRetryRef = useRef<any>(null);
   
   const virtuosoRef = useRef<VirtuosoHandle>(null);
 

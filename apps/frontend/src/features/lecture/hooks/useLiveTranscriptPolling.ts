@@ -19,7 +19,7 @@ export function useLiveTranscriptPolling({
 }: UseLiveTranscriptPollingProps) {
   const [error, setError] = useState<string | null>(null);
   const lastSequenceRef = useRef<number>(-1);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<any>(null);
   const isFetchingRef = useRef(false);
 
   const fetchLiveChunks = useCallback(async () => {

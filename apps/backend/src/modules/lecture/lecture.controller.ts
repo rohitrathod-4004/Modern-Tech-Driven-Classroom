@@ -101,4 +101,15 @@ export class LectureController {
 
     res.status(200).json({ data });
   }
+
+  static async delete(req: Request, res: Response) {
+    const { courseId, lectureId } = req.params;
+    const teacherId = req.user!.id;
+
+    const lecture = await LectureService.deleteLecture(courseId, lectureId, teacherId);
+
+    res.status(200).json({
+      data: lecture
+    });
+  }
 }

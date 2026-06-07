@@ -1,0 +1,15 @@
+{
+    "name": "attack-simulator",
+    "version": "1.0.0",
+    "description": "Attack execution backend for security demonstrations",
+    "main": "server.js",
+    "scripts": {
+        "dev": "node server.js",
+        "start": "node server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "cors": "^2.8.5",
+        "socket.io-client": "^4.5.4"
+    }
+}

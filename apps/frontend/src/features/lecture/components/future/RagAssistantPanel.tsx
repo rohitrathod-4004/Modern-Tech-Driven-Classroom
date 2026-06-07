@@ -88,7 +88,7 @@ export const RagAssistantPanel: React.FC = () => {
         <button 
           type="submit" 
           disabled={loading || !question.trim()}
-          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 disabled:opacity-50 disabled:pointer-events-none"
+          className="shrink-0 inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 disabled:opacity-50 disabled:pointer-events-none"
         >
           {loading ? 'Asking...' : 'Ask'}
         </button>
