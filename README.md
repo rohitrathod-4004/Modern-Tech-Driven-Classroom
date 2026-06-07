@@ -18,15 +18,6 @@ A comprehensive, real-time, offline-first web application designed to transform 
 - **Organization & Billing Management:** Multi-tenant architecture allowing Organizations to invite teachers, allocate credits, and manage subscriptions with Razorpay integration.
 - **Smart Virtuoso Timeline:** 60fps virtualization for rendering thousands of transcript chunks seamlessly, auto-syncing with media playback.
 
-## 📸 Screenshots
-
-| Cinematic Dashboard | Lecture Viewer & Smart Timeline |
-|-----------|--------------------------------|
-| ![Dashboard Placeholder](docs/screenshots/dashboard.png) | ![Lecture Viewer Placeholder](docs/screenshots/lecture_viewer.png) |
-
-| AI Study Workspace | Generated Quiz |
-|--------------------|----------------|
-| ![Study Mode Placeholder](docs/screenshots/study_mode.png) | ![Quiz Placeholder](docs/screenshots/quiz.png) |
 
 ## 🏗 Architecture & Tech Stack
 
@@ -51,8 +42,7 @@ On the frontend, **React Virtuoso** prevents DOM bloat; rendering thousands of t
 │   ├── frontend/         # React SPA (Vite)
 │   └── backend/          # Express API & WebSocket Server
 ├── shared/               # Shared TypeScript types & interfaces
-├── python-services/      # Auxiliary Python microservices (e.g., Whisper)
-└── docs/                 # Documentation & Assets
+└── python-services/      # Auxiliary Python microservices (e.g., Whisper)
 ```
 
 ## 🚀 Setup & Localhost Development
@@ -117,7 +107,6 @@ On the frontend, **React Virtuoso** prevents DOM bloat; rendering thousands of t
 ## ⚠️ Known Limitations
 - Voice Activity Detection (VAD) in the browser can occasionally split sentences awkwardly if the speaker pauses for exactly 2 seconds.
 - The platform relies entirely on `ffmpeg-static` for backend processing; extremely large files might encounter Node.js memory limits.
-- The WebRTC P2P mesh network (`simple-peer`) is ideal for smaller classrooms (up to 4-5 participants). For larger scale, an SFU transition (like mediasoup or LiveKit) is recommended.
 
 ## 🛣 Future Roadmap
 - **Deployment:** Containerize via Docker and deploy on AWS ECS or Render.
